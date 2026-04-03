@@ -3,4 +3,5 @@
 //! and the core functions for the density-based clustering.
 
 pub mod kd_tree;
+pub mod linkage;
 pub mod mst;
