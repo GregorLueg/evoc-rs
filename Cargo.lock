@@ -429,6 +429,7 @@ dependencies = [
  "ann-search-rs",
  "approx",
  "faer",
+ "faer-traits",
  "manifolds-rs",
  "num-traits",
  "rand 0.10.0",

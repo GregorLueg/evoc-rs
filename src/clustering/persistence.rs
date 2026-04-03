@@ -158,7 +158,7 @@ where
 
         let contribution = (bc.size_death - bc.size_birth) * bc.lambda_death;
         for k in birth_pos..death_pos {
-            persistence[k] = persistence[k] + contribution;
+            persistence[k] += contribution;
         }
     }
 

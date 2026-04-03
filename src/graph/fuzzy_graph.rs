@@ -5,7 +5,7 @@ use rayon::prelude::*;
 use rustc_hash::FxHashMap;
 
 use crate::prelude::*;
-use crate::utils::structures::CoordinateList;
+use crate::utils::sparse::CoordinateList;
 
 /////////////
 // Helpers //
@@ -72,7 +72,7 @@ where
                 let mut val = T::zero();
                 for &dist in d.iter() {
                     let adjusted = (dist - rho).max(T::zero());
-                    val = val + (-(adjusted / mid)).exp();
+                    val += (-(adjusted / mid)).exp();
                 }
 
                 if (val.to_f64().unwrap() - target).abs() < tolerance {

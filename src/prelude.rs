@@ -5,5 +5,5 @@
 //! use evoc_rs::prelude::*;
 //! ```
 
-pub use crate::utils::structures::CoordinateList;
+pub use crate::utils::sparse::CoordinateList;
 pub use crate::utils::traits::EvocFloat;

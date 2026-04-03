@@ -259,7 +259,7 @@ where
                             (-(two * noise * dist) - two) / (two * dsq - half * dist + T::one());
 
                         for d in 0..dim {
-                            grad[d] = grad[d] + coeff * (embd[bi + d] - embd[bo + d]);
+                            grad[d] += coeff * (embd[bi + d] - embd[bo + d]);
                         }
                     }
 
@@ -283,7 +283,7 @@ where
                                 let gc = gamma * four / ((T::one() + quarter * dsq_k) * dsq_k);
                                 for d in 0..dim {
                                     let diff = embd[bi + d] - embd[bk + d];
-                                    grad[d] = grad[d] + (gc * diff).max(-clip).min(clip);
+                                    grad[d] += (gc * diff).max(-clip).min(clip);
                                 }
                             }
                         }
@@ -310,7 +310,7 @@ where
                     let gd = g[d];
                     m_n[d] = m_n[d] + one_m_b1 * (gd - m_n[d]);
                     v_n[d] = v_n[d] + one_m_b2 * (gd * gd - v_n[d]);
-                    e_n[d] = e_n[d] + lr * ad_scale * m_n[d] / (v_n[d].sqrt() + epsc);
+                    e_n[d] += lr * ad_scale * m_n[d] / (v_n[d].sqrt() + epsc);
                 }
             });
 
@@ -322,9 +322,9 @@ where
             .zip(epochs_per_neg.par_iter())
             .for_each(|(((ns, nn), &ps), &pn)| {
                 if *ns <= epoch_t {
-                    *ns = *ns + ps;
+                    *ns += ps;
                     let neg_count = ((epoch_t - *nn) / pn).floor().to_usize().unwrap_or(0);
-                    *nn = *nn + T::from(neg_count).unwrap() * pn;
+                    *nn += T::from(neg_count).unwrap() * pn;
                 }
             });
 

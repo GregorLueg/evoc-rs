@@ -182,7 +182,7 @@ impl<T: EvocFloat> KdTree<T> {
             } else {
                 T::zero()
             };
-            r = r + diff * diff;
+            r += diff * diff;
         }
         r
     }
