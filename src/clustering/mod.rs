@@ -6,3 +6,4 @@ pub mod condensed_tree;
 pub mod kd_tree;
 pub mod linkage;
 pub mod mst;
+pub mod persistence;
