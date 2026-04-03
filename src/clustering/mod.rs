@@ -2,6 +2,7 @@
 //! utilities namely the generation of minimum spanning trees (MST), KD trees
 //! and the core functions for the density-based clustering.
 
+pub mod condensed_tree;
 pub mod kd_tree;
 pub mod linkage;
 pub mod mst;
