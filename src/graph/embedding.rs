@@ -25,6 +25,12 @@ pub const UMAP_BETA2: f64 = 0.9;
 /// Parameters for the EVoC node embedding
 #[derive(Clone, Debug)]
 pub struct EvocEmbeddingParams<T> {
+    /// Number of iterations during the label propagation
+    pub n_label_prop_iter: usize,
+    /// Base initialisation threshold
+    pub base_init_threshold: usize,
+    /// Scaling parameter
+    pub scaling: T,
     /// Number of training epochs. Higher values give more refined embeddings at
     /// the cost of runtime. Default: 50.
     pub n_epochs: usize,
@@ -51,6 +57,9 @@ pub struct EvocEmbeddingParams<T> {
 impl<T: EvocFloat> Default for EvocEmbeddingParams<T> {
     fn default() -> Self {
         Self {
+            n_label_prop_iter: 20,
+            base_init_threshold: 64,
+            scaling: T::from(0.1).unwrap(),
             n_epochs: 50,
             noise_level: T::from(0.5).unwrap(),
             negative_sample_rate: T::one(),
