@@ -2,6 +2,14 @@
 name = "evoc-rs"
 version = "0.1.0"
 edition = "2024"
+authors = ["Gregor Lueg <gregorlueg@me.com>"]
+license = "MIT"
+repository = "https://github.com/GregorLueg/evoc-rs"
+description = "Rust port of the EVoC clustering algorithm for high dimensional data"
+
+[lib]
+name = "evoc_rs"
+path = "src/lib.rs"
 
 [dependencies]
 ann-search-rs = "0.2.9"
