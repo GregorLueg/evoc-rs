@@ -3,7 +3,7 @@ name = "evoc-rs"
 version = "0.1.0"
 edition = "2024"
 authors = ["Gregor Lueg <gregorlueg@me.com>"]
-license = "MIT"
+license = "MIT AND BSD-2-Clause"
 repository = "https://github.com/GregorLueg/evoc-rs"
 description = "Rust port of the EVoC clustering algorithm for high dimensional data"
 
