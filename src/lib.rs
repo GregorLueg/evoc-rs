@@ -3,8 +3,11 @@
 //! Efficient clustering of high-dimensional embedding vectors (CLIP, sentence
 //! transformers, etc.) by combining a UMAP-like node embedding with
 //! HDBSCAN-style density-based clustering and multi-layer persistence
-//! analysis. This is the Rust version which allows for different approximate
-//! nearest neighbour search algorithms.
+//! analysis. This is the Rust version/port which allows for different
+//! approximate nearest neighbour search algorithms (for details, see
+//! [ann-search-rs](https://crates.io/crates/ann-search-rs)).
+//! This code is based on the original code from Leland McInnes, see the Python
+//! implementation: [evoc](https://github.com/TutteInstitute/evoc)
 
 #![allow(clippy::needless_range_loop)]
 #![warn(missing_docs)]

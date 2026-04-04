@@ -271,7 +271,7 @@ where
 ///
 /// ### Returns
 ///
-/// CoordinateList<T> of the fuzzy simplicial set
+/// `CoordinateList<T>` of the fuzzy simplicial set
 pub fn build_fuzzy_simplicial_set<T>(
     knn_indices: &[Vec<usize>],
     knn_dists: &[Vec<T>],
