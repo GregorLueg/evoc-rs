@@ -39,7 +39,10 @@ pub struct ClusterBarcode<T> {
 ///
 /// One `ClusterBarcode` per cluster node, in order of node index; empty if the
 /// tree has no cluster-to-cluster edges
-pub fn min_cluster_size_barcode<T>(tree: &CondensedTree<T>) -> Vec<ClusterBarcode<T>>
+pub fn min_cluster_size_barcode<T>(
+    tree: &CondensedTree<T>,
+    min_size: usize,
+) -> Vec<ClusterBarcode<T>>
 where
     T: EvocFloat,
 {
@@ -61,7 +64,7 @@ where
 
     let mut barcodes = vec![
         ClusterBarcode {
-            size_birth: T::from(2).unwrap(),
+            size_birth: T::from(min_size).unwrap(),
             size_death: T::zero(),
             parent: n_points,
             lambda_death: T::zero(),
@@ -90,7 +93,7 @@ where
         // lambda at death = exp(-1/lambda_val) in the Python, but we
         // store the raw lambda for now (the persistence computation
         // uses it directly)
-        let lv = node_a.lambda_val;
+        let lv = (-T::one() / node_a.lambda_val).exp();
         barcodes[idx_a].lambda_death = lv;
         barcodes[idx_b].lambda_death = lv;
 
@@ -404,7 +407,7 @@ where
     let mut all_strengths = vec![base_strengths];
     let mut all_persistence = vec![0.0f64];
 
-    let barcodes = min_cluster_size_barcode(&ct);
+    let barcodes = min_cluster_size_barcode(&ct, base_min_cluster_size);
     if !barcodes.is_empty() {
         let (sizes, persistence) = compute_total_persistence(&barcodes);
         let peaks = find_peaks(&persistence);
@@ -533,7 +536,7 @@ mod tests {
         let mut mst = build_mst(&data, 1);
         let linkage = mst_to_linkage_tree(&mut mst, n);
         let ct = condense_tree(&linkage, n, 2);
-        let barcodes = min_cluster_size_barcode(&ct);
+        let barcodes = min_cluster_size_barcode(&ct, 2);
 
         assert!(!barcodes.is_empty());
         // root should have death = n
@@ -547,7 +550,7 @@ mod tests {
         let mut mst = build_mst(&data, 1);
         let linkage = mst_to_linkage_tree(&mut mst, n);
         let ct = condense_tree(&linkage, n, 2);
-        let barcodes = min_cluster_size_barcode(&ct);
+        let barcodes = min_cluster_size_barcode(&ct, 2);
         let (sizes, persistence) = compute_total_persistence(&barcodes);
 
         assert_eq!(sizes.len(), persistence.len());

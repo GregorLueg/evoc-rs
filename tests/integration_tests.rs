@@ -364,7 +364,7 @@ fn integration_06_barcode_non_empty() {
     let mut mst = build_mst(&data, 3);
     let linkage = mst_to_linkage_tree(&mut mst, n);
     let ct = condense_tree(&linkage, n, 2);
-    let barcodes = min_cluster_size_barcode(&ct);
+    let barcodes = min_cluster_size_barcode(&ct, 2);
 
     assert!(!barcodes.is_empty(), "Barcode should not be empty");
 
@@ -381,7 +381,7 @@ fn integration_06b_persistence_non_negative() {
     let mut mst = build_mst(&data, 3);
     let linkage = mst_to_linkage_tree(&mut mst, n);
     let ct = condense_tree(&linkage, n, 2);
-    let barcodes = min_cluster_size_barcode(&ct);
+    let barcodes = min_cluster_size_barcode(&ct, 2);
     let (sizes, persistence) = compute_total_persistence(&barcodes);
 
     assert_eq!(sizes.len(), persistence.len());
