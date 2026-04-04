@@ -337,15 +337,6 @@ where
     let mut lo = 2usize;
     let mut hi = n / 2;
 
-    // Evaluate bounds
-    let ct_lo = condense_tree(&linkage, n, lo);
-    let leaves_lo = extract_leaves(&ct_lo);
-    let lo_k = leaves_lo.len();
-
-    let ct_hi = condense_tree(&linkage, n, hi);
-    let leaves_hi = extract_leaves(&ct_hi);
-    let hi_k = leaves_hi.len();
-
     while hi - lo > 1 {
         let mid = (lo + hi) / 2;
         if mid == lo || mid == hi {

@@ -4,7 +4,50 @@
 //! dimension at the median. Accelerates the per-round "find nearest point
 //! in a different component" query via same-component subtree pruning.
 
+use rayon::prelude::*;
+use std::cmp::Ordering;
+use std::collections::BinaryHeap;
+
 use crate::prelude::*;
+
+//////////////////////
+// Candidate search //
+//////////////////////
+
+/// A neighbour candidate for the max-heap used in k-NN queries.
+/// Ordered by distance descending so `BinaryHeap` (max-heap) evicts
+/// the furthest candidate first.
+#[derive(Clone, Debug)]
+struct KnnCandidate<T> {
+    /// Squarted distance
+    dist_sq: T,
+    /// Idx of the candidate
+    idx: usize,
+}
+
+impl<T: PartialOrd> PartialEq for KnnCandidate<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.dist_sq == other.dist_sq
+    }
+}
+
+impl<T: PartialOrd> Eq for KnnCandidate<T> {}
+
+impl<T: PartialOrd> PartialOrd for KnnCandidate<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<T: PartialOrd> Ord for KnnCandidate<T> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap_or(Ordering::Equal)
+    }
+}
+
+////////////
+// KdTree //
+////////////
 
 /// Axis-aligned KD-tree stored as a flattened binary tree.
 ///
@@ -32,6 +75,10 @@ pub struct KdTree<T> {
 }
 
 impl<T: EvocFloat> KdTree<T> {
+    //////////////
+    // Building //
+    //////////////
+
     /// Build a KD-tree over `data`.
     ///
     /// ### Params
@@ -254,7 +301,8 @@ impl<T: EvocFloat> KdTree<T> {
     /// * `node` - Current node index in the flattened tree
     /// * `lb` - Precomputed AABB lower-bound distance for `node`
     /// * `best_j` - Running nearest neighbour index, updated in place
-    /// * `best_d` - Running best squared mutual reachability distance, updated in place
+    /// * `best_d` - Running best squared mutual reachability distance, updated
+    ///   in place
     #[allow(clippy::too_many_arguments)]
     fn noc_recurse(
         &self,
@@ -360,7 +408,127 @@ impl<T: EvocFloat> KdTree<T> {
             }
         }
     }
+
+    //////////////////
+    // kNN querying //
+    //////////////////
+
+    /// Find the `k` nearest neighbours of `query` in the tree (squared
+    /// Euclidean distances).
+    ///
+    /// Standard best-first KD-tree search: maintains a max-heap of `k`
+    /// candidates and prunes subtrees whose AABB lower-bound exceeds the
+    /// current k-th best distance.
+    ///
+    /// ### Params
+    ///
+    /// * `data` - Point coordinates used to build the tree
+    /// * `query` - Query point coordinates
+    /// * `k` - Number of neighbours to return
+    /// * `exclude` - Optional point index to exclude (for self-queries)
+    ///
+    /// ### Returns
+    ///
+    /// `Vec<(usize, T)>` of up to `k` `(index, squared_distance)` pairs,
+    /// sorted by ascending distance.
+    pub fn knn_query(
+        &self,
+        data: &[Vec<T>],
+        query: &[T],
+        k: usize,
+        exclude: Option<usize>,
+    ) -> Vec<(usize, T)> {
+        if self.n_nodes == 0 || k == 0 {
+            return Vec::new();
+        }
+        let mut heap: BinaryHeap<KnnCandidate<T>> = BinaryHeap::with_capacity(k);
+        self.knn_recurse(data, query, k, exclude, 0, &mut heap);
+
+        let mut result: Vec<(usize, T)> = heap.into_iter().map(|c| (c.idx, c.dist_sq)).collect();
+        result.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        result
+    }
+
+    /// Parallel batch k-NN query: find the `k` nearest neighbours for every
+    /// point in `data`, excluding self.
+    ///
+    /// ### Params
+    ///
+    /// * `data` - Point coordinates (same as used to build the tree)
+    /// * `k` - Number of neighbours per point
+    ///
+    /// ### Returns
+    ///
+    /// `(indices, sq_distances)` where each inner `Vec` has length `k`,
+    /// sorted by ascending distance.
+    pub fn knn_query_batch(&self, data: &[Vec<T>], k: usize) -> (Vec<Vec<usize>>, Vec<Vec<T>>) {
+        let results: Vec<Vec<(usize, T)>> = (0..data.len())
+            .into_par_iter()
+            .map(|i| self.knn_query(data, &data[i], k, Some(i)))
+            .collect();
+
+        let mut indices = Vec::with_capacity(data.len());
+        let mut distances = Vec::with_capacity(data.len());
+        for r in results {
+            let (idx, dist): (Vec<usize>, Vec<T>) = r.into_iter().unzip();
+            indices.push(idx);
+            distances.push(dist);
+        }
+        (indices, distances)
+    }
+
+    /// Recursive k-NN traversal.
+    fn knn_recurse(
+        &self,
+        data: &[Vec<T>],
+        query: &[T],
+        k: usize,
+        exclude: Option<usize>,
+        node: usize,
+        heap: &mut BinaryHeap<KnnCandidate<T>>,
+    ) {
+        // AABB pruning: if heap is full and lower bound exceeds worst, skip
+        let lb = self.aabb_sq(node, query);
+        if heap.len() == k && lb >= heap.peek().unwrap().dist_sq {
+            return;
+        }
+
+        if self.is_leaf[node] {
+            for i in self.idx_start[node]..self.idx_end[node] {
+                let j = self.idx_array[i];
+                if exclude == Some(j) {
+                    continue;
+                }
+                let d = T::euclidean_simd(&data[j], query);
+                if heap.len() < k {
+                    heap.push(KnnCandidate { dist_sq: d, idx: j });
+                } else if d < heap.peek().unwrap().dist_sq {
+                    heap.pop();
+                    heap.push(KnnCandidate { dist_sq: d, idx: j });
+                }
+            }
+            return;
+        }
+
+        let left = 2 * node + 1;
+        let right = left + 1;
+        let lb_l = self.aabb_sq(left, query);
+        let lb_r = self.aabb_sq(right, query);
+
+        // Visit closer child first for tighter pruning
+        if lb_l <= lb_r {
+            self.knn_recurse(data, query, k, exclude, left, heap);
+            self.knn_recurse(data, query, k, exclude, right, heap);
+        } else {
+            self.knn_recurse(data, query, k, exclude, right, heap);
+            self.knn_recurse(data, query, k, exclude, left, heap);
+        }
+    }
 }
+
+///////////
+// Tests //
+///////////
 
 #[cfg(test)]
 mod tests {
@@ -525,5 +693,141 @@ mod tests {
                 "Distance mismatch for point {qi}"
             );
         }
+    }
+
+    #[test]
+    fn test_knn_query_basic() {
+        // Points on a line: 0, 1, 2, 3, 4
+        let data: Vec<Vec<f64>> = (0..5).map(|i| vec![i as f64]).collect();
+        let tree = KdTree::build(&data, 2);
+
+        // k=2 nearest to point at index 2 (value 2.0), excluding self
+        let result = tree.knn_query(&data, &[2.0], 2, Some(2));
+        assert_eq!(result.len(), 2);
+        // Neighbours should be indices 1 and 3 (distance 1.0 each)
+        let indices: Vec<usize> = result.iter().map(|r| r.0).collect();
+        assert!(indices.contains(&1));
+        assert!(indices.contains(&3));
+        for &(_, d) in &result {
+            assert!((d - 1.0).abs() < 1e-10);
+        }
+    }
+
+    #[test]
+    fn test_knn_query_without_exclude() {
+        let data: Vec<Vec<f64>> = vec![vec![0.0, 0.0], vec![1.0, 0.0], vec![3.0, 0.0]];
+        let tree = KdTree::build(&data, 10);
+
+        // k=1, query at origin, no exclusion -- should find self (index 0)
+        let result = tree.knn_query(&data, &[0.0, 0.0], 1, None);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].0, 0);
+        assert!((result[0].1).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_knn_query_sorted_ascending() {
+        let data = vec![vec![0.0], vec![1.0], vec![5.0], vec![10.0], vec![20.0]];
+        let tree = KdTree::build(&data, 2);
+
+        let result = tree.knn_query(&data, &[0.0], 4, Some(0));
+        assert_eq!(result.len(), 4);
+        for i in 1..result.len() {
+            assert!(result[i].1 >= result[i - 1].1);
+        }
+    }
+
+    #[test]
+    fn test_knn_query_batch_sizes() {
+        let data: Vec<Vec<f64>> = (0..20).map(|i| vec![i as f64, 0.0]).collect();
+        let tree = KdTree::build(&data, 5);
+
+        let (indices, distances) = tree.knn_query_batch(&data, 3);
+        assert_eq!(indices.len(), 20);
+        assert_eq!(distances.len(), 20);
+        for idx in &indices {
+            assert_eq!(idx.len(), 3);
+        }
+    }
+
+    #[test]
+    fn test_knn_query_batch_excludes_self() {
+        let data: Vec<Vec<f64>> = (0..10).map(|i| vec![i as f64]).collect();
+        let tree = KdTree::build(&data, 5);
+
+        let (indices, _) = tree.knn_query_batch(&data, 2);
+        for (i, idx) in indices.iter().enumerate() {
+            assert!(
+                !idx.contains(&i),
+                "Point {i} found itself in its own k-NN result"
+            );
+        }
+    }
+
+    #[test]
+    fn test_knn_agrees_with_brute_force() {
+        let data = vec![
+            vec![0.0, 0.0],
+            vec![1.0, 0.0],
+            vec![0.0, 1.0],
+            vec![5.0, 5.0],
+            vec![6.0, 5.0],
+            vec![5.0, 6.0],
+            vec![10.0, 10.0],
+        ];
+        let tree = KdTree::build(&data, 2);
+        let k = 3;
+
+        for qi in 0..data.len() {
+            let tree_result = tree.knn_query(&data, &data[qi], k, Some(qi));
+
+            // Brute force k-NN
+            let mut all: Vec<(usize, f64)> = (0..data.len())
+                .filter(|&j| j != qi)
+                .map(|j| {
+                    let d: f64 = data[qi]
+                        .iter()
+                        .zip(&data[j])
+                        .map(|(a, b)| (a - b) * (a - b))
+                        .sum();
+                    (j, d)
+                })
+                .collect();
+            all.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+            let bf: Vec<(usize, f64)> = all.into_iter().take(k).collect();
+
+            assert_eq!(
+                tree_result.len(),
+                bf.len(),
+                "Length mismatch for query {qi}"
+            );
+            for (t, b) in tree_result.iter().zip(bf.iter()) {
+                assert_eq!(t.0, b.0, "Index mismatch for query {qi}");
+                assert!(
+                    (t.1 - b.1).abs() < 1e-10,
+                    "Distance mismatch for query {qi}: tree={}, brute={}",
+                    t.1,
+                    b.1
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_knn_query_k_larger_than_data() {
+        let data = vec![vec![0.0], vec![1.0], vec![2.0]];
+        let tree = KdTree::build(&data, 10);
+
+        // Ask for 5 neighbours but only 2 exist (excluding self)
+        let result = tree.knn_query(&data, &[0.0], 5, Some(0));
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn test_knn_query_empty_tree() {
+        let data: Vec<Vec<f64>> = vec![];
+        let tree = KdTree::build(&data, 10);
+        let result = tree.knn_query(&data, &[1.0, 2.0], 3, None);
+        assert!(result.is_empty());
     }
 }

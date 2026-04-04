@@ -25,6 +25,7 @@ pub fn make_blobs(
             let mut point = vec![0.0f64; dim];
             // Centre along first axis, spread in all dimensions
             point[0] = c as f64 * separation;
+            #[allow(clippy::needless_range_loop)]
             for d in 0..dim {
                 // Box-Muller for normal samples
                 let u1: f64 = rng.random_range(1e-10..1.0);

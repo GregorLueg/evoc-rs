@@ -30,68 +30,17 @@ pub struct MstEdge<T> {
     pub weight: T,
 }
 
-/// Compute squared core distances (k-th NN squared distance per point).
-///
-/// Uses `select_nth_unstable` (introselect, expected O(n)) per point rather
-/// than a full sort.
-///
-/// ### Params
-///
-/// * `data` - Point coordinates
-/// * `min_samples` - The k in "k-th nearest neighbour distance"
-///
-/// ### Returns
-///
-/// `Vec<T>` of length `n` containing squared core distances
-fn compute_core_distances_sq<T>(data: &[Vec<T>], min_samples: usize) -> Vec<T>
-where
-    T: EvocFloat,
-{
-    let n = data.len();
-    if n == 0 || min_samples == 0 {
-        return vec![T::zero(); n];
-    }
-
-    // let tree = KdTree::build(data, 40);
-    let k = min_samples.min(n - 1);
-
-    // Per-point: find k-th nearest neighbour distance via brute scan of
-    // the KD-tree is overkill here. But we can use a simple approach:
-    // since we already need the KD-tree for the MST, we can compute
-    // core distances during the first Boruvka round. For now, keep the
-    // brute force but parallelise it — this is what Python does too
-    // (it calls parallel_tree_query which is essentially a parallel
-    // KD-tree k-NN query).
-    (0..n)
-        .into_par_iter()
-        .map(|i| {
-            // Simple k-NN scan: collect all distances, partial sort
-            let mut sq_dists: Vec<T> = (0..n)
-                .filter(|&j| j != i)
-                .map(|j| T::euclidean_simd(&data[i], &data[j]))
-                .collect();
-
-            let k = k.min(sq_dists.len());
-            if k == 0 {
-                return T::zero();
-            }
-            sq_dists.select_nth_unstable_by(k - 1, |a, b| a.partial_cmp(b).unwrap());
-            sq_dists[k - 1]
-        })
-        .collect()
-}
-
 /// Compute the mutual reachability distance MST via Boruvka's algorithm,
 /// accelerated by a KD-tree with same-component subtree pruning.
+///
+/// Builds the KD-tree first, then uses a parallel batch k-NN query to
+/// compute squared core distances (k-th nearest neighbour distance per
+/// point) in O(n log n) expected time, replacing the previous O(n^2)
+/// brute-force scan.
 ///
 /// Boruvka's proceeds in O(log n) rounds. Each round finds, for every
 /// connected component, the minimum-weight cross-edge to a different
 /// component, then merges all such edges simultaneously.
-///
-/// The KD-tree prunes the per-point nearest-other-component search by
-/// skipping subtrees where all points belong to the query's component. As
-/// components grow through merges, increasingly large subtrees are pruned,
-/// making later rounds very cheap.
 ///
 /// All internal comparisons use squared Euclidean distances. Final MST edge
 /// weights are converted to Euclidean (sqrt) before returning.
@@ -99,7 +48,7 @@ where
 /// ### Params
 ///
 /// * `data` - Point coordinates; `data[i]` is the embedding vector for point
-///   i. Typically 4-15 dimensional from the EVoC embedding stage.
+///   i. Typically 4-16 dimensional from the EVoC embedding stage.
 /// * `min_samples` - Controls density estimation: core distance for point i is
 ///   the distance to its `min_samples`-th nearest neighbour.
 ///
@@ -116,8 +65,20 @@ where
         return Vec::new();
     }
 
-    let core_sq = compute_core_distances_sq(data, min_samples);
+    // build the KD-tree first -used for both core distances and Boruvka
     let tree = KdTree::build(data, 40);
+
+    // core distances via parallel k-NN query on the tree: O(n log n)
+    let k = min_samples.min(n - 1);
+    let core_sq = if k == 0 {
+        vec![T::zero(); n]
+    } else {
+        let (_, dists) = tree.knn_query_batch(data, k);
+        dists
+            .into_iter()
+            .map(|d| *d.last().unwrap_or(&T::zero()))
+            .collect()
+    };
 
     let mut ds = DisjointSet::new(n);
     let mut mst = Vec::with_capacity(n - 1);
@@ -130,13 +91,11 @@ where
         }
         tree.update_node_components(&pt_comp, &mut nd_comp);
 
-        // per-point: find nearest point in a different component
         let best: Vec<(usize, T)> = (0..n)
             .into_par_iter()
             .map(|i| tree.nearest_other_component(data, i, &core_sq, &pt_comp, &nd_comp))
             .collect();
 
-        // reduce to best cross-edge per component
         let mut best_per_comp: FxHashMap<usize, (usize, usize, T)> = FxHashMap::default();
         for (i, &(j, d)) in best.iter().enumerate() {
             if j == i {
@@ -181,6 +140,10 @@ where
     }
     mst
 }
+
+///////////
+// Tests //
+///////////
 
 #[cfg(test)]
 mod tests {
