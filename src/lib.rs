@@ -25,6 +25,10 @@ use manifolds_rs::PreComputedKnn;
 use manifolds_rs::data::nearest_neighbours::*;
 use std::time::Instant;
 
+use crate::clustering::condensed_tree::*;
+use crate::clustering::linkage::mst_to_linkage_tree;
+use crate::clustering::mst::build_mst;
+use crate::clustering::persistence::build_cluster_layers;
 use crate::graph::embedding::*;
 use crate::graph::fuzzy_graph::*;
 use crate::prelude::*;
@@ -44,10 +48,10 @@ pub struct EvocParams<T> {
     /// Number of embedding optimisation epochs.
     pub n_epochs: usize,
     /// Embedding dimensionality. If `None`, defaults to
-    /// `min(max(n_neighbors / 4, 4), 15)`.
+    /// `min(max(n_neighbours / 4, 4), 16)`.
     pub embedding_dim: Option<usize>,
     /// Multiplier on effective neighbours for fuzzy graph construction.
-    pub neighbor_scale: T,
+    pub neighbour_scale: T,
     /// Whether to symmetrise the fuzzy graph.
     pub symmetrise: bool,
     /// Minimum samples for core distance in MST density estimation.
@@ -73,7 +77,7 @@ impl<T: EvocFloat> Default for EvocParams<T> {
             noise_level: T::from(0.5).unwrap(),
             n_epochs: 50,
             embedding_dim: None,
-            neighbor_scale: T::one(),
+            neighbour_scale: T::one(),
             symmetrise: true,
             min_samples: 5,
             base_min_cluster_size: 5,
@@ -105,8 +109,9 @@ pub struct EvocResult<T> {
 }
 
 impl<T: EvocFloat> EvocResult<T> {
-    /// Labels from the layer with the highest persistence score,
-    /// or the base layer if only one exists.
+    /// Returns labels from the layer with the highest persistence score.
+    ///
+    /// Falls back to the only available layer when there is just one.
     pub fn best_labels(&self) -> &[i64] {
         if self.cluster_layers.len() <= 1 {
             &self.cluster_layers[0]
@@ -122,7 +127,8 @@ impl<T: EvocFloat> EvocResult<T> {
         }
     }
 
-    /// Membership strengths corresponding to `best_labels`.
+    /// Returns membership strengths corresponding to
+    /// [`EvocResult::best_labels`].
     pub fn best_strengths(&self) -> &[T] {
         if self.membership_strengths.len() <= 1 {
             &self.membership_strengths[0]
@@ -138,7 +144,7 @@ impl<T: EvocFloat> EvocResult<T> {
         }
     }
 
-    /// Number of clusters in the best layer (excluding noise).
+    /// Number of clusters in the best layer, excluding noise points.
     pub fn n_clusters(&self) -> usize {
         let labels = self.best_labels();
         (labels.iter().max().copied().unwrap_or(-1) + 1).max(0) as usize
@@ -151,12 +157,36 @@ impl<T: EvocFloat> EvocResult<T> {
 
 /// Run EVoC clustering on high-dimensional embedding data.
 ///
-/// Pipeline:
-/// 1. Build k-NN graph via NNDescent
-/// 2. Construct fuzzy simplicial set (smooth kNN + symmetrise)
-/// 3. Compute low-dimensional node embedding (modified UMAP with EVoC gradient)
-/// 4. Build MST with mutual reachability distance on the embedding
-/// 5. Extract hierarchical cluster layers via persistence analysis
+/// # Pipeline
+///
+/// 1. **kNN graph** — builds an approximate nearest-neighbour graph via the
+///    selected ANN backend (`ann_type`), or uses `precomputed_knn` if
+///    provided.
+/// 2. **Fuzzy simplicial set** — smooths and optionally symmetrises the kNN
+///    graph into a weighted undirected graph.
+/// 3. **Node embedding** — optimises a low-dimensional layout using the EVoC
+///    gradient (a modified UMAP repulsion term controlled by `noise_level`).
+/// 4. **MST** — builds a minimum spanning tree over the embedding using
+///    mutual reachability distances.
+/// 5. **Cluster layers** — extracts a hierarchy of clusterings from the MST
+///    via persistence analysis, or searches for a fixed number of clusters if
+///    [`EvocParams::approx_n_clusters`] is set.
+///
+/// ### Params
+///
+/// * `data` — input matrix with shape `(n_points, n_features)`.
+/// * `ann_type` — ANN backend identifier (e.g. `"nndescent"`, `"hnsw"`).
+/// * `precomputed_knn` — pre-built `(indices, distances)` pair; pass `None`
+///   to build the graph from `data`.
+/// * `evoc_params` — clustering hyperparameters; see [`EvocParams`].
+/// * `nn_params` — hyperparameters forwarded to the ANN backend.
+/// * `seed` — random seed for reproducibility.
+/// * `verbose` — print progress and timing to stdout.
+///
+/// ### Returns
+///
+/// An [`EvocResult`] containing cluster layers, membership strengths,
+/// persistence scores, and the kNN graph.
 pub fn evoc<T>(
     data: MatRef<T>,
     ann_type: String,
@@ -209,7 +239,7 @@ where
         println!("Constructing fuzzy simplicial set...");
     }
     let start_graph = Instant::now();
-    let effective_k = evoc_params.neighbor_scale * T::from(evoc_params.n_neighbours).unwrap();
+    let effective_k = evoc_params.neighbour_scale * T::from(evoc_params.n_neighbours).unwrap();
     let graph =
         build_fuzzy_simplicial_set(&knn_indices, &knn_dist, effective_k, evoc_params.symmetrise);
     let adj = coo_to_adjacency_list(&graph);
@@ -221,9 +251,10 @@ where
     }
 
     // 3. Embedding dimensionality
+    // original code did 4 to 15 -> went up one for SIMD
     let dim = evoc_params
         .embedding_dim
-        .unwrap_or_else(|| (evoc_params.n_neighbours / 4).clamp(4, 15));
+        .unwrap_or_else(|| (evoc_params.n_neighbours / 4).clamp(4, 16));
 
     // 4. Label propagation initialisation
     let start_init = Instant::now();
@@ -286,7 +317,7 @@ where
                 search_for_n_clusters(&embedding, evoc_params.min_samples, target_k);
             (vec![labels], vec![strengths], vec![0.0])
         } else {
-            crate::clustering::persistence::build_cluster_layers(
+            build_cluster_layers(
                 &embedding,
                 evoc_params.min_samples,
                 evoc_params.base_min_cluster_size,
@@ -314,9 +345,29 @@ where
     }
 }
 
-/// Binary search over `min_cluster_size` to find approximately `target_k`
-/// clusters. Matches the Python `_binary_search_for_n_clusters`: builds the
-/// MST and linkage tree once, then re-condenses at different thresholds.
+/// Binary-searches over `min_cluster_size` to find approximately `target_k`
+/// clusters.
+///
+/// Builds the MST and linkage tree once from `embedding`, then re-condenses
+/// the tree at different `min_cluster_size` thresholds until the number of
+/// extracted leaves is close to `target_k`.
+///
+/// When the search converges, both boundary values (`lo` and `hi`) are
+/// evaluated and the one whose cluster count is closer to `target_k` is
+/// returned. Ties are broken in favour of whichever boundary assigns more
+/// points to non-noise clusters.
+///
+/// ### Params
+///
+/// * `embedding` — low-dimensional node positions, one `Vec<T>` per point.
+/// * `min_samples` — passed to [`build_mst`] for core-distance estimation.
+/// * `target_k` — desired number of clusters.
+///
+/// ### Returns
+///
+/// A `(labels, membership_strengths)` pair for the selected clustering.
+/// Labels follow the same convention as [`EvocResult::cluster_layers`]:
+/// `-1` is noise, non-negative integers are cluster IDs.
 pub fn search_for_n_clusters<T>(
     embedding: &[Vec<T>],
     min_samples: usize,
@@ -325,10 +376,6 @@ pub fn search_for_n_clusters<T>(
 where
     T: EvocFloat,
 {
-    use crate::clustering::condensed_tree::*;
-    use crate::clustering::linkage::mst_to_linkage_tree;
-    use crate::clustering::mst::build_mst;
-
     let n = embedding.len();
     if n == 0 {
         return (Vec::new(), Vec::new());
