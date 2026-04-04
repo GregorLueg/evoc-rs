@@ -1,0 +1,23 @@
+[package]
+name = "evoc-rs"
+version = "0.1.0"
+edition = "2024"
+authors = ["Gregor Lueg <gregorlueg@me.com>"]
+license = "MIT AND BSD-2-Clause"
+repository = "https://github.com/GregorLueg/evoc-rs"
+description = "Rust port of the EVoC clustering algorithm for high dimensional data"
+
+[lib]
+name = "evoc_rs"
+path = "src/lib.rs"
+
+[dependencies]
+ann-search-rs = "0.2.9"
+approx = "0.5.1"
+faer = "0.23.2"
+faer-traits = "0.23.2"
+manifolds-rs = "0.1.14"
+num-traits = "0.2.19"
+rand = "0.10.0"
+rayon = "1.11.0"
+rustc-hash = "2.1.2"
