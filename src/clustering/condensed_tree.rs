@@ -270,7 +270,7 @@ pub fn extract_leaves(tree: &CondensedTree<impl EvocFloat>) -> Vec<usize> {
         .nodes
         .iter()
         .map(|n| n.parent.max(n.child))
-        .max()
+        .reduce(usize::max)
         .unwrap_or(0);
 
     let mut is_parent = vec![false; max_id + 1];
@@ -324,14 +324,14 @@ where
         .nodes
         .iter()
         .map(|n| n.parent.max(n.child))
-        .max()
+        .reduce(usize::max)
         .unwrap_or(0);
 
     let root = tree
         .nodes
         .iter()
         .map(|n| n.parent)
-        .min()
+        .reduce(usize::min)
         .unwrap_or(n_samples);
 
     let mut ds = DisjointSet::new(max_id + 1);
@@ -442,7 +442,12 @@ where
         .map(|(i, &c)| (i as i64, c))
         .collect();
 
-    let root = tree.nodes.iter().map(|n| n.parent).min().unwrap_or(n);
+    let root = tree
+        .nodes
+        .iter()
+        .map(|n| n.parent)
+        .reduce(usize::min)
+        .unwrap_or(n);
 
     for node in &tree.nodes {
         let point = node.child;

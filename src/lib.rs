@@ -144,7 +144,7 @@ impl<T: EvocFloat> EvocResult<T> {
     /// Number of clusters in the best layer, excluding noise points.
     pub fn n_clusters(&self) -> usize {
         let labels = self.best_labels();
-        (labels.iter().max().copied().unwrap_or(-1) + 1).max(0) as usize
+        (labels.iter().copied().reduce(i64::max).unwrap_or(-1) + 1).max(0) as usize
     }
 }
 
