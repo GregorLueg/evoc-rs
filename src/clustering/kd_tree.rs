@@ -33,9 +33,13 @@ impl<T: PartialOrd> PartialEq for KnnCandidate<T> {
 
 impl<T: PartialOrd> Eq for KnnCandidate<T> {}
 
+#[allow(clippy::non_canonical_partial_ord_impl)]
 impl<T: PartialOrd> PartialOrd for KnnCandidate<T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
+        match self.dist_sq.partial_cmp(&other.dist_sq) {
+            Some(Ordering::Equal) => Some(self.idx.cmp(&other.idx)),
+            ord => ord,
+        }
     }
 }
 
@@ -79,20 +83,15 @@ impl<T: EvocFloat> KdTree<T> {
     // Building //
     //////////////
 
-    /// Build a KD-tree over `data`.
+    /// Build a KD-tree over flat point data.
     ///
     /// ### Params
     ///
-    /// * `data` - Point coordinates; `data[i]` is the vector for point `i`
-    /// * `leaf_size` - Maximum points per leaf. Tree depth is chosen so leaves
-    ///   contain between `leaf_size` and `2 * leaf_size` points.
-    ///
-    /// ### Returns
-    ///
-    /// A `KdTree` ready for queries
-    pub fn build(data: &[Vec<T>], leaf_size: usize) -> Self {
-        let n = data.len();
-        let dim = data.first().map_or(0, |v| v.len());
+    /// * `data` - Flat point coordinates; point `i` is `data[i*dim..(i+1)*dim]`
+    /// * `dim`  - Dimensionality of each point
+    /// * `leaf_size` - Maximum points per leaf
+    pub fn build(data: &[T], dim: usize, leaf_size: usize) -> Self {
+        let n = if dim == 0 { 0 } else { data.len() / dim };
         let leaf_size = leaf_size.max(1);
 
         if n == 0 {
@@ -125,9 +124,7 @@ impl<T: EvocFloat> KdTree<T> {
             n_nodes,
             dim,
         };
-        if n > 0 {
-            tree.build_node(data, 0, n, 0);
-        }
+        tree.build_node(data, 0, n, 0);
         tree
     }
 
@@ -138,6 +135,21 @@ impl<T: EvocFloat> KdTree<T> {
     /// Number of nodes
     pub fn n_nodes(&self) -> usize {
         self.n_nodes
+    }
+
+    /// Helper function to return the data of a point
+    ///
+    /// ### Params
+    ///
+    /// * `data` - The flattened data
+    /// * `i` - Index of the data point
+    ///
+    /// ### Returns
+    ///
+    /// Slice of the data of point `i`.
+    #[inline]
+    fn pt<'a>(&self, data: &'a [T], i: usize) -> &'a [T] {
+        &data[i * self.dim..(i + 1) * self.dim]
     }
 
     /// Recursively partition points and populate node metadata.
@@ -151,20 +163,19 @@ impl<T: EvocFloat> KdTree<T> {
     ///
     /// ### Params
     ///
-    /// * `data` - Full point array passed to `build`
+    /// * `data` - Full point array passed to `build` (flattened version)
     /// * `start` - Inclusive start offset into `idx_array` for this node
     /// * `end` - Exclusive end offset into `idx_array` for this node
     /// * `node` - Index of the current node in the flattened tree
-    fn build_node(&mut self, data: &[Vec<T>], start: usize, end: usize, node: usize) {
+    fn build_node(&mut self, data: &[T], start: usize, end: usize, node: usize) {
         let dim = self.dim;
         let bo = node * dim;
 
-        // AABB from first point, then expand
-        let first = &data[self.idx_array[start]];
+        let first = self.pt(data, self.idx_array[start]);
         self.lower[bo..bo + dim].copy_from_slice(first);
         self.upper[bo..bo + dim].copy_from_slice(first);
         for i in (start + 1)..end {
-            let pt = &data[self.idx_array[i]];
+            let pt = self.pt(data, self.idx_array[i]);
             for d in 0..dim {
                 self.lower[bo + d] = self.lower[bo + d].min(pt[d]);
                 self.upper[bo + d] = self.upper[bo + d].max(pt[d]);
@@ -181,7 +192,6 @@ impl<T: EvocFloat> KdTree<T> {
         }
         self.is_leaf[node] = false;
 
-        // split on widest dimension
         let mut split_dim = 0;
         let mut max_spread = T::zero();
         for d in 0..dim {
@@ -192,10 +202,11 @@ impl<T: EvocFloat> KdTree<T> {
             }
         }
 
-        // partition around median via introselect
         let mid = start + (end - start) / 2;
         self.idx_array[start..end].select_nth_unstable_by(mid - start, |&a, &b| {
-            data[a][split_dim].partial_cmp(&data[b][split_dim]).unwrap()
+            data[a * dim + split_dim]
+                .partial_cmp(&data[b * dim + split_dim])
+                .unwrap()
         });
 
         self.build_node(data, start, mid, left);
@@ -248,7 +259,7 @@ impl<T: EvocFloat> KdTree<T> {
     ///
     /// ### Params
     ///
-    /// * `data` - Full point array (same one passed to `build`)
+    /// * `data` - Full point array (same one passed to `build` - flattened)
     /// * `qi` - Index of the query point
     /// * `core_sq` - Squared core distances for all points
     /// * `pt_comp` - Component label per point
@@ -260,7 +271,7 @@ impl<T: EvocFloat> KdTree<T> {
     /// in a different component, or `(qi, T::max_value())` if none exists.
     pub fn nearest_other_component(
         &self,
-        data: &[Vec<T>],
+        data: &[T],
         qi: usize,
         core_sq: &[T],
         pt_comp: &[usize],
@@ -268,7 +279,7 @@ impl<T: EvocFloat> KdTree<T> {
     ) -> (usize, T) {
         let mut best_j = qi;
         let mut best_d = T::max_value();
-        let lb = self.aabb_sq(0, &data[qi]);
+        let lb = self.aabb_sq(0, self.pt(data, qi));
         self.noc_recurse(
             data,
             qi,
@@ -306,7 +317,7 @@ impl<T: EvocFloat> KdTree<T> {
     #[allow(clippy::too_many_arguments)]
     fn noc_recurse(
         &self,
-        data: &[Vec<T>],
+        data: &[T],
         qi: usize,
         core_sq: &[T],
         pt_comp: &[usize],
@@ -316,21 +327,19 @@ impl<T: EvocFloat> KdTree<T> {
         best_j: &mut usize,
         best_d: &mut T,
     ) {
-        // Prune 1: AABB lower bound
         if lb > *best_d {
             return;
         }
-        // Prune 2: query core distance
         if core_sq[qi] > *best_d {
             return;
         }
-        // Prune 3: entire node is same component as query
         let qc = pt_comp[qi] as i64;
         if nd_comp[node] == qc {
             return;
         }
 
         if self.is_leaf[node] {
+            let qi_pt = self.pt(data, qi);
             for i in self.idx_start[node]..self.idx_end[node] {
                 let j = self.idx_array[i];
                 if pt_comp[j] as i64 == qc {
@@ -339,7 +348,7 @@ impl<T: EvocFloat> KdTree<T> {
                 if core_sq[j] > *best_d {
                     continue;
                 }
-                let sq = T::euclidean_simd(&data[qi], &data[j]);
+                let sq = T::euclidean_simd(qi_pt, self.pt(data, j));
                 let mr = sq.max(core_sq[qi]).max(core_sq[j]);
                 if mr < *best_d {
                     *best_d = mr;
@@ -351,10 +360,10 @@ impl<T: EvocFloat> KdTree<T> {
 
         let left = 2 * node + 1;
         let right = left + 1;
-        let lb_l = self.aabb_sq(left, &data[qi]);
-        let lb_r = self.aabb_sq(right, &data[qi]);
+        let qi_pt = self.pt(data, qi);
+        let lb_l = self.aabb_sq(left, qi_pt);
+        let lb_r = self.aabb_sq(right, qi_pt);
 
-        // Visit closer child first for tighter early pruning
         if lb_l <= lb_r {
             self.noc_recurse(
                 data, qi, core_sq, pt_comp, nd_comp, left, lb_l, best_j, best_d,
@@ -420,20 +429,17 @@ impl<T: EvocFloat> KdTree<T> {
     /// candidates and prunes subtrees whose AABB lower-bound exceeds the
     /// current k-th best distance.
     ///
+    /// Find the `k` nearest neighbours of `query`.
+    ///
     /// ### Params
     ///
-    /// * `data` - Point coordinates used to build the tree
-    /// * `query` - Query point coordinates
-    /// * `k` - Number of neighbours to return
-    /// * `exclude` - Optional point index to exclude (for self-queries)
-    ///
-    /// ### Returns
-    ///
-    /// `Vec<(usize, T)>` of up to `k` `(index, squared_distance)` pairs,
-    /// sorted by ascending distance.
+    /// * `data` - Flat point data used to build the tree
+    /// * `query` - Query point coordinates (length `dim`)
+    /// * `k` - Number of neighbours
+    /// * `exclude` - Optional point index to skip (for self-queries)
     pub fn knn_query(
         &self,
-        data: &[Vec<T>],
+        data: &[T],
         query: &[T],
         k: usize,
         exclude: Option<usize>,
@@ -445,7 +451,7 @@ impl<T: EvocFloat> KdTree<T> {
         self.knn_recurse(data, query, k, exclude, 0, &mut heap);
 
         let mut result: Vec<(usize, T)> = heap.into_iter().map(|c| (c.idx, c.dist_sq)).collect();
-        result.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        result.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap().then(a.0.cmp(&b.0)));
         result
     }
 
@@ -454,21 +460,23 @@ impl<T: EvocFloat> KdTree<T> {
     ///
     /// ### Params
     ///
-    /// * `data` - Point coordinates (same as used to build the tree)
+    /// * `data` - Point coordinates (same as used to build the tree -
+    ///   flattened).
     /// * `k` - Number of neighbours per point
     ///
     /// ### Returns
     ///
     /// `(indices, sq_distances)` where each inner `Vec` has length `k`,
     /// sorted by ascending distance.
-    pub fn knn_query_batch(&self, data: &[Vec<T>], k: usize) -> (Vec<Vec<usize>>, Vec<Vec<T>>) {
-        let results: Vec<Vec<(usize, T)>> = (0..data.len())
+    pub fn knn_query_batch(&self, data: &[T], k: usize) -> (Vec<Vec<usize>>, Vec<Vec<T>>) {
+        let n = data.len() / self.dim;
+        let results: Vec<Vec<(usize, T)>> = (0..n)
             .into_par_iter()
-            .map(|i| self.knn_query(data, &data[i], k, Some(i)))
+            .map(|i| self.knn_query(data, self.pt(data, i), k, Some(i)))
             .collect();
 
-        let mut indices = Vec::with_capacity(data.len());
-        let mut distances = Vec::with_capacity(data.len());
+        let mut indices = Vec::with_capacity(n);
+        let mut distances = Vec::with_capacity(n);
         for r in results {
             let (idx, dist): (Vec<usize>, Vec<T>) = r.into_iter().unzip();
             indices.push(idx);
@@ -480,16 +488,15 @@ impl<T: EvocFloat> KdTree<T> {
     /// Recursive k-NN traversal.
     fn knn_recurse(
         &self,
-        data: &[Vec<T>],
+        data: &[T],
         query: &[T],
         k: usize,
         exclude: Option<usize>,
         node: usize,
         heap: &mut BinaryHeap<KnnCandidate<T>>,
     ) {
-        // AABB pruning: if heap is full and lower bound exceeds worst, skip
         let lb = self.aabb_sq(node, query);
-        if heap.len() == k && lb >= heap.peek().unwrap().dist_sq {
+        if heap.len() == k && lb > heap.peek().unwrap().dist_sq {
             return;
         }
 
@@ -499,12 +506,15 @@ impl<T: EvocFloat> KdTree<T> {
                 if exclude == Some(j) {
                     continue;
                 }
-                let d = T::euclidean_simd(&data[j], query);
+                let d = T::euclidean_simd(self.pt(data, j), query);
                 if heap.len() < k {
                     heap.push(KnnCandidate { dist_sq: d, idx: j });
-                } else if d < heap.peek().unwrap().dist_sq {
-                    heap.pop();
-                    heap.push(KnnCandidate { dist_sq: d, idx: j });
+                } else {
+                    let worst = heap.peek().unwrap();
+                    if d < worst.dist_sq || (d == worst.dist_sq && j < worst.idx) {
+                        heap.pop();
+                        heap.push(KnnCandidate { dist_sq: d, idx: j });
+                    }
                 }
             }
             return;
@@ -515,7 +525,6 @@ impl<T: EvocFloat> KdTree<T> {
         let lb_l = self.aabb_sq(left, query);
         let lb_r = self.aabb_sq(right, query);
 
-        // Visit closer child first for tighter pruning
         if lb_l <= lb_r {
             self.knn_recurse(data, query, k, exclude, left, heap);
             self.knn_recurse(data, query, k, exclude, right, heap);
@@ -534,17 +543,21 @@ impl<T: EvocFloat> KdTree<T> {
 mod tests {
     use super::*;
 
+    fn flat(nested: &[&[f64]]) -> Vec<f64> {
+        nested.iter().flat_map(|v| v.iter().copied()).collect()
+    }
+
     #[test]
     fn test_build_empty() {
-        let data: Vec<Vec<f64>> = vec![];
-        let tree = KdTree::build(&data, 10);
+        let data: Vec<f64> = vec![];
+        let tree = KdTree::build(&data, 2, 10);
         assert_eq!(tree.n_nodes(), 0);
     }
 
     #[test]
     fn test_build_single() {
-        let data = vec![vec![1.0, 2.0]];
-        let tree = KdTree::build(&data, 10);
+        let data = flat(&[&[1.0, 2.0]]);
+        let tree = KdTree::build(&data, 2, 10);
         assert!(tree.is_leaf[0]);
         assert_eq!(tree.idx_start[0], 0);
         assert_eq!(tree.idx_end[0], 1);
@@ -552,10 +565,8 @@ mod tests {
 
     #[test]
     fn test_build_covers_all_points() {
-        let data: Vec<Vec<f64>> = (0..100).map(|i| vec![i as f64, 0.0]).collect();
-        let tree = KdTree::build(&data, 10);
-
-        // Every point index should appear exactly once in idx_array
+        let data: Vec<f64> = (0..100).flat_map(|i| [i as f64, 0.0]).collect();
+        let tree = KdTree::build(&data, 2, 10);
         let mut seen = [false; 100];
         for &idx in &tree.idx_array {
             assert!(!seen[idx]);
@@ -566,59 +577,45 @@ mod tests {
 
     #[test]
     fn test_aabb_sq_inside() {
-        let data = vec![vec![0.0, 0.0], vec![10.0, 10.0]];
-        let tree = KdTree::build(&data, 10);
-        // Point inside the root AABB should have zero distance
-        let d = tree.aabb_sq(0, &[5.0, 5.0]);
-        assert_eq!(d, 0.0);
+        let data = flat(&[&[0.0, 0.0], &[10.0, 10.0]]);
+        let tree = KdTree::build(&data, 2, 10);
+        assert_eq!(tree.aabb_sq(0, &[5.0, 5.0]), 0.0);
     }
 
     #[test]
     fn test_aabb_sq_outside() {
-        let data = vec![vec![0.0, 0.0], vec![1.0, 1.0]];
-        let tree = KdTree::build(&data, 10);
-        // Point at (3, 0): distance to box [0,1]x[0,1] is 2 in x, 0 in y
+        let data = flat(&[&[0.0, 0.0], &[1.0, 1.0]]);
+        let tree = KdTree::build(&data, 2, 10);
         let d: f64 = tree.aabb_sq(0, &[3.0, 0.5]);
         assert!((d - 4.0).abs() < 1e-10);
     }
 
     #[test]
     fn test_nearest_other_component_simple() {
-        let data = vec![vec![0.0, 0.0], vec![1.0, 0.0], vec![10.0, 0.0]];
-        let tree = KdTree::build(&data, 10);
-        let core_sq = vec![0.0; 3]; // zero core distances
-        let pt_comp = vec![0, 0, 1]; // points 0,1 in comp 0; point 2 in comp 1
+        let data = flat(&[&[0.0, 0.0], &[1.0, 0.0], &[10.0, 0.0]]);
+        let tree = KdTree::build(&data, 2, 10);
+        let core_sq = vec![0.0f64; 3];
+        let pt_comp = vec![0, 0, 1];
         let mut nd_comp = vec![-1i64; tree.n_nodes()];
         tree.update_node_components(&pt_comp, &mut nd_comp);
 
-        // From point 0, nearest in a different component is point 2
         let (j, _) = tree.nearest_other_component(&data, 0, &core_sq, &pt_comp, &nd_comp);
         assert_eq!(j, 2);
-
-        // From point 1, also point 2
         let (j, _) = tree.nearest_other_component(&data, 1, &core_sq, &pt_comp, &nd_comp);
         assert_eq!(j, 2);
-
-        // From point 2, nearest other-component is point 1 (closer than 0)
         let (j, _) = tree.nearest_other_component(&data, 2, &core_sq, &pt_comp, &nd_comp);
         assert_eq!(j, 1);
     }
 
     #[test]
     fn test_nearest_other_component_with_core_distances() {
-        // Points: 0 at origin, 1 at (1,0), 2 at (2,0)
-        // Components: 0={0,1}, 1={2}
-        // Core sq for point 1 = 100 (inflated), so MR from 1->2 = max(1, 100, core[2])
-        let data = vec![vec![0.0, 0.0], vec![1.0, 0.0], vec![2.0, 0.0]];
-        let tree = KdTree::build(&data, 10);
+        let data = flat(&[&[0.0, 0.0], &[1.0, 0.0], &[2.0, 0.0]]);
+        let tree = KdTree::build(&data, 2, 10);
         let core_sq = vec![0.0, 100.0, 0.0];
         let pt_comp = vec![0, 0, 1];
         let mut nd_comp = vec![-1i64; tree.n_nodes()];
         tree.update_node_components(&pt_comp, &mut nd_comp);
 
-        // From point 0: MR(0,2) = max(4, 0, 0) = 4
-        // From point 1: MR(1,2) = max(1, 100, 0) = 100
-        // So point 0 should have the cheaper cross-edge
         let (_, d0) = tree.nearest_other_component(&data, 0, &core_sq, &pt_comp, &nd_comp);
         let (_, d1) = tree.nearest_other_component(&data, 1, &core_sq, &pt_comp, &nd_comp);
         assert!(d0 < d1);
@@ -626,59 +623,54 @@ mod tests {
 
     #[test]
     fn test_node_components_all_same() {
-        let data = vec![vec![0.0], vec![1.0], vec![2.0]];
-        let tree = KdTree::build(&data, 10);
-        let pt_comp = vec![5, 5, 5]; // all same component
+        let data = flat(&[&[0.0], &[1.0], &[2.0]]);
+        let tree = KdTree::build(&data, 1, 10);
+        let pt_comp = vec![5, 5, 5];
         let mut nd_comp = vec![-1i64; tree.n_nodes()];
         tree.update_node_components(&pt_comp, &mut nd_comp);
-
-        // Root should be labelled 5
         assert_eq!(nd_comp[0], 5);
     }
 
     #[test]
     fn test_node_components_mixed() {
-        let data = vec![vec![0.0], vec![1.0], vec![2.0]];
-        let tree = KdTree::build(&data, 10);
+        let data = flat(&[&[0.0], &[1.0], &[2.0]]);
+        let tree = KdTree::build(&data, 1, 10);
         let pt_comp = vec![0, 0, 1];
         let mut nd_comp = vec![-1i64; tree.n_nodes()];
         tree.update_node_components(&pt_comp, &mut nd_comp);
-
-        // Root should be mixed
         assert_eq!(nd_comp[0], -1);
     }
 
     #[test]
     fn test_agrees_with_brute_force() {
-        // Verify tree-based query matches naive scan
-        let data = vec![
-            vec![0.0, 0.0],
-            vec![1.0, 0.0],
-            vec![5.0, 5.0],
-            vec![6.0, 5.0],
-            vec![10.0, 10.0],
+        let pts: &[&[f64]] = &[
+            &[0.0, 0.0],
+            &[1.0, 0.0],
+            &[5.0, 5.0],
+            &[6.0, 5.0],
+            &[10.0, 10.0],
         ];
-        let core_sq = vec![0.0; 5];
+        let data = flat(pts);
+        let core_sq = vec![0.0f64; 5];
         let pt_comp = vec![0, 0, 1, 1, 2];
 
-        let tree = KdTree::build(&data, 2);
+        let tree = KdTree::build(&data, 2, 2);
         let mut nd_comp = vec![-1i64; tree.n_nodes()];
         tree.update_node_components(&pt_comp, &mut nd_comp);
 
         for qi in 0..5 {
             let (tj, td) = tree.nearest_other_component(&data, qi, &core_sq, &pt_comp, &nd_comp);
 
-            // Brute force
             let mut bf_j = qi;
             let mut bf_d = f64::MAX;
             for j in 0..5 {
                 if pt_comp[j] == pt_comp[qi] {
                     continue;
                 }
-                let sq: f64 = data[qi]
+                let sq: f64 = pts[qi]
                     .iter()
-                    .zip(&data[j])
-                    .map(|(a, b)| (a - b) * (a - b))
+                    .zip(pts[j])
+                    .map(|(a, b)| (a - b).powi(2))
                     .sum();
                 let mr = sq.max(core_sq[qi]).max(core_sq[j]);
                 if mr < bf_d {
@@ -697,14 +689,11 @@ mod tests {
 
     #[test]
     fn test_knn_query_basic() {
-        // Points on a line: 0, 1, 2, 3, 4
-        let data: Vec<Vec<f64>> = (0..5).map(|i| vec![i as f64]).collect();
-        let tree = KdTree::build(&data, 2);
+        let data: Vec<f64> = (0..5).flat_map(|i| [i as f64]).collect();
+        let tree = KdTree::build(&data, 1, 2);
 
-        // k=2 nearest to point at index 2 (value 2.0), excluding self
         let result = tree.knn_query(&data, &[2.0], 2, Some(2));
         assert_eq!(result.len(), 2);
-        // Neighbours should be indices 1 and 3 (distance 1.0 each)
         let indices: Vec<usize> = result.iter().map(|r| r.0).collect();
         assert!(indices.contains(&1));
         assert!(indices.contains(&3));
@@ -715,21 +704,18 @@ mod tests {
 
     #[test]
     fn test_knn_query_without_exclude() {
-        let data: Vec<Vec<f64>> = vec![vec![0.0, 0.0], vec![1.0, 0.0], vec![3.0, 0.0]];
-        let tree = KdTree::build(&data, 10);
-
-        // k=1, query at origin, no exclusion -- should find self (index 0)
+        let data = flat(&[&[0.0, 0.0], &[1.0, 0.0], &[3.0, 0.0]]);
+        let tree = KdTree::build(&data, 2, 10);
         let result = tree.knn_query(&data, &[0.0, 0.0], 1, None);
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].0, 0);
-        assert!((result[0].1).abs() < 1e-10);
+        assert!(result[0].1.abs() < 1e-10);
     }
 
     #[test]
     fn test_knn_query_sorted_ascending() {
-        let data = vec![vec![0.0], vec![1.0], vec![5.0], vec![10.0], vec![20.0]];
-        let tree = KdTree::build(&data, 2);
-
+        let data: Vec<f64> = vec![0.0, 1.0, 5.0, 10.0, 20.0];
+        let tree = KdTree::build(&data, 1, 2);
         let result = tree.knn_query(&data, &[0.0], 4, Some(0));
         assert_eq!(result.len(), 4);
         for i in 1..result.len() {
@@ -739,9 +725,8 @@ mod tests {
 
     #[test]
     fn test_knn_query_batch_sizes() {
-        let data: Vec<Vec<f64>> = (0..20).map(|i| vec![i as f64, 0.0]).collect();
-        let tree = KdTree::build(&data, 5);
-
+        let data: Vec<f64> = (0..20).flat_map(|i| [i as f64, 0.0]).collect();
+        let tree = KdTree::build(&data, 2, 5);
         let (indices, distances) = tree.knn_query_batch(&data, 3);
         assert_eq!(indices.len(), 20);
         assert_eq!(distances.len(), 20);
@@ -752,9 +737,8 @@ mod tests {
 
     #[test]
     fn test_knn_query_batch_excludes_self() {
-        let data: Vec<Vec<f64>> = (0..10).map(|i| vec![i as f64]).collect();
-        let tree = KdTree::build(&data, 5);
-
+        let data: Vec<f64> = (0..10).map(|i| i as f64).collect();
+        let tree = KdTree::build(&data, 1, 5);
         let (indices, _) = tree.knn_query_batch(&data, 2);
         for (i, idx) in indices.iter().enumerate() {
             assert!(
@@ -766,34 +750,34 @@ mod tests {
 
     #[test]
     fn test_knn_agrees_with_brute_force() {
-        let data = vec![
-            vec![0.0, 0.0],
-            vec![1.0, 0.0],
-            vec![0.0, 1.0],
-            vec![5.0, 5.0],
-            vec![6.0, 5.0],
-            vec![5.0, 6.0],
-            vec![10.0, 10.0],
+        let pts: &[&[f64]] = &[
+            &[0.0, 0.0],
+            &[1.0, 0.0],
+            &[0.0, 1.0],
+            &[5.0, 5.0],
+            &[6.0, 5.0],
+            &[5.0, 6.0],
+            &[10.0, 10.0],
         ];
-        let tree = KdTree::build(&data, 2);
+        let data = flat(pts);
+        let tree = KdTree::build(&data, 2, 2);
         let k = 3;
 
-        for qi in 0..data.len() {
-            let tree_result = tree.knn_query(&data, &data[qi], k, Some(qi));
+        for qi in 0..pts.len() {
+            let tree_result = tree.knn_query(&data, pts[qi], k, Some(qi));
 
-            // Brute force k-NN
-            let mut all: Vec<(usize, f64)> = (0..data.len())
+            let mut all: Vec<(usize, f64)> = (0..pts.len())
                 .filter(|&j| j != qi)
                 .map(|j| {
-                    let d: f64 = data[qi]
+                    let d: f64 = pts[qi]
                         .iter()
-                        .zip(&data[j])
-                        .map(|(a, b)| (a - b) * (a - b))
+                        .zip(pts[j])
+                        .map(|(a, b)| (a - b).powi(2))
                         .sum();
                     (j, d)
                 })
                 .collect();
-            all.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+            all.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap().then(a.0.cmp(&b.0)));
             let bf: Vec<(usize, f64)> = all.into_iter().take(k).collect();
 
             assert_eq!(
@@ -815,18 +799,16 @@ mod tests {
 
     #[test]
     fn test_knn_query_k_larger_than_data() {
-        let data = vec![vec![0.0], vec![1.0], vec![2.0]];
-        let tree = KdTree::build(&data, 10);
-
-        // Ask for 5 neighbours but only 2 exist (excluding self)
+        let data = flat(&[&[0.0], &[1.0], &[2.0]]);
+        let tree = KdTree::build(&data, 1, 10);
         let result = tree.knn_query(&data, &[0.0], 5, Some(0));
         assert_eq!(result.len(), 2);
     }
 
     #[test]
     fn test_knn_query_empty_tree() {
-        let data: Vec<Vec<f64>> = vec![];
-        let tree = KdTree::build(&data, 10);
+        let data: Vec<f64> = vec![];
+        let tree = KdTree::build(&data, 2, 10);
         let result = tree.knn_query(&data, &[1.0, 2.0], 3, None);
         assert!(result.is_empty());
     }

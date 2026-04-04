@@ -1,3 +1,5 @@
+#![allow(clippy::needless_range_loop)]
+
 mod commons;
 use commons::*;
 
@@ -7,6 +9,8 @@ use evoc_rs::clustering::condensed_tree::*;
 use evoc_rs::clustering::linkage::*;
 use evoc_rs::clustering::mst::*;
 use evoc_rs::clustering::persistence::*;
+use evoc_rs::graph::EvocEmbeddingParams;
+use evoc_rs::graph::embedding::*;
 
 // =========================================================================
 // Stage 1: MST on known clusters
@@ -305,7 +309,7 @@ fn integration_05_search_for_n_clusters_exact() {
 /// Request 5 clusters from 5-cluster data.
 #[test]
 fn integration_05b_search_for_n_clusters_five() {
-    let (data, gt) = make_blobs(25, 5, 4, 50.0, 0.5, 42);
+    let (data, _) = make_blobs(25, 5, 4, 50.0, 0.5, 42);
     let n = data.len();
     let mut mst = build_mst(&data, 3);
     let linkage = mst_to_linkage_tree(&mut mst, n);
@@ -503,10 +507,6 @@ fn integration_08_mst_reproducibility() {
 /// Embedding should be deterministic with the same seed.
 #[test]
 fn integration_08b_embedding_reproducibility() {
-    use evoc_rs::graph::EvocEmbeddingParams;
-    use evoc_rs::graph::embedding::*;
-    use evoc_rs::graph::fuzzy_graph::*;
-
     let graph: Vec<Vec<(usize, f64)>> = vec![
         vec![(1, 1.0), (2, 0.5)],
         vec![(0, 1.0), (2, 0.8)],

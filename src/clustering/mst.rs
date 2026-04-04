@@ -19,6 +19,29 @@ use crate::utils::disjoint_set::DisjointSet;
 
 use crate::clustering::kd_tree::KdTree;
 
+/////////////
+// Helpers //
+/////////////
+
+/// Helper to flatten the points for better cache locality
+///
+/// ### Params
+///
+/// * `data` - Original data
+///
+/// ### Returns
+///
+/// Tuple of `(flat data, dim)`
+fn flatten_points<T: Copy>(data: &[Vec<T>]) -> (Vec<T>, usize) {
+    let dim = data.first().map_or(0, |v| v.len());
+    let flat = data.iter().flat_map(|v| v.iter().copied()).collect();
+    (flat, dim)
+}
+
+/////////
+// MST //
+/////////
+
 /// An edge in the minimum spanning tree.
 #[derive(Clone, Debug)]
 pub struct MstEdge<T> {
@@ -66,14 +89,15 @@ where
     }
 
     // build the KD-tree first -used for both core distances and Boruvka
-    let tree = KdTree::build(data, 40);
+    let (flat, dim) = flatten_points(data);
+    let tree = KdTree::build(&flat, dim, 40);
 
     // core distances via parallel k-NN query on the tree: O(n log n)
     let k = min_samples.min(n - 1);
     let core_sq = if k == 0 {
         vec![T::zero(); n]
     } else {
-        let (_, dists) = tree.knn_query_batch(data, k);
+        let (_, dists) = tree.knn_query_batch(&flat, k);
         dists
             .into_iter()
             .map(|d| *d.last().unwrap_or(&T::zero()))
@@ -93,7 +117,7 @@ where
 
         let best: Vec<(usize, T)> = (0..n)
             .into_par_iter()
-            .map(|i| tree.nearest_other_component(data, i, &core_sq, &pt_comp, &nd_comp))
+            .map(|i| tree.nearest_other_component(&flat, i, &core_sq, &pt_comp, &nd_comp))
             .collect();
 
         let mut best_per_comp: FxHashMap<usize, (usize, usize, T)> = FxHashMap::default();
