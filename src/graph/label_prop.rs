@@ -10,11 +10,11 @@
 //! 6. Expand back to the full graph via partition averaging
 
 use rand::RngExt;
+use rand::SeedableRng;
 use rand::rngs::SmallRng;
-use rand::{Rng, SeedableRng};
 use rayon::prelude::*;
 
-use crate::graph::embedding::{EvocEmbeddingParams, evoc_embedding};
+use crate::graph::embedding::evoc_embedding;
 use crate::prelude::*;
 use crate::utils::sparse::{CoordinateList, Csr, mat_to_vecs, vecs_to_mat};
 
@@ -571,8 +571,6 @@ mod tests {
         assert_eq!(result[0], -1);
     }
 
-    // -- label_outliers -----------------------------------------------------
-
     #[test]
     fn outliers_finds_labelled_neighbour() {
         // 0 -- 1 -- 2, only node 2 labelled
@@ -595,8 +593,6 @@ mod tests {
         assert!(labels[0] >= 0 && labels[0] <= 5);
     }
 
-    // -- remap_labels -------------------------------------------------------
-
     #[test]
     fn remap_contiguous() {
         let mut labels = vec![10, 10, 20, 20, 10];
@@ -618,8 +614,6 @@ mod tests {
         assert!(labels[3] >= 1 && labels[3] <= 2);
         assert_ne!(labels[1], labels[3]); // each -1 gets a unique id
     }
-
-    // -- label_prop_loop ----------------------------------------------------
 
     #[test]
     fn loop_returns_valid_partition() {
@@ -653,18 +647,16 @@ mod tests {
         }
     }
 
-    // -- normalise_to_unit_range --------------------------------------------
-
     #[test]
     fn unit_range_normalisation() {
         let mut data: Vec<Vec<f64>> = vec![vec![0.0, 10.0], vec![4.0, 20.0], vec![8.0, 30.0]];
         normalise_to_unit_range(&mut data);
 
-        for row in &data {
-            for &v in row {
-                assert!(v >= -1.0 - 1e-12 && v <= 1.0 + 1e-12);
-            }
-        }
+        assert!(
+            data.iter()
+                .flatten()
+                .all(|&v| (-1.0 - 1e-12..=1.0 + 1e-12).contains(&v))
+        );
         // Min -> -1, max -> 1 for each column
         assert!((data[0][0] - (-1.0)).abs() < 1e-12);
         assert!((data[2][0] - 1.0).abs() < 1e-12);

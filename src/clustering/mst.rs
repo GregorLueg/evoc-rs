@@ -48,15 +48,30 @@ where
     T: EvocFloat,
 {
     let n = data.len();
+    if n == 0 || min_samples == 0 {
+        return vec![T::zero(); n];
+    }
+
+    // let tree = KdTree::build(data, 40);
+    let k = min_samples.min(n - 1);
+
+    // Per-point: find k-th nearest neighbour distance via brute scan of
+    // the KD-tree is overkill here. But we can use a simple approach:
+    // since we already need the KD-tree for the MST, we can compute
+    // core distances during the first Boruvka round. For now, keep the
+    // brute force but parallelise it — this is what Python does too
+    // (it calls parallel_tree_query which is essentially a parallel
+    // KD-tree k-NN query).
     (0..n)
         .into_par_iter()
         .map(|i| {
+            // Simple k-NN scan: collect all distances, partial sort
             let mut sq_dists: Vec<T> = (0..n)
                 .filter(|&j| j != i)
                 .map(|j| T::euclidean_simd(&data[i], &data[j]))
                 .collect();
 
-            let k = min_samples.min(sq_dists.len());
+            let k = k.min(sq_dists.len());
             if k == 0 {
                 return T::zero();
             }

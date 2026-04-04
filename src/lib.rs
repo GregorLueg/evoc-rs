@@ -162,8 +162,7 @@ pub fn evoc<T>(
     nn_params: &NearestNeighbourParams<T>,
     seed: usize,
     verbose: bool,
-)
-// -> EvocResult<T>
+) -> EvocResult<T>
 where
     T: EvocFloat + AnnSearchFloat,
     NNDescent<T>: ApplySortedUpdates<T> + NNDescentQuery<T>,
@@ -171,6 +170,7 @@ where
 {
     let start_all = Instant::now();
 
+    // 1. kNN graph
     let (knn_indices, knn_dist) = match precomputed_knn {
         Some((indices, distances)) => {
             if verbose {
@@ -195,39 +195,63 @@ where
                 verbose,
             );
             if verbose {
-                println!("kNN search done in: {:.2?}.", start_knn.elapsed());
+                println!("kNN search done in {:.2?}.", start_knn.elapsed());
             }
             result
         }
     };
 
-    // 2. fuzzy simplicial set
+    // 2. Fuzzy simplicial set
     if verbose {
         println!("Constructing fuzzy simplicial set...");
     }
+    let start_graph = Instant::now();
     let effective_k = evoc_params.neighbor_scale * T::from(evoc_params.n_neighbours).unwrap();
     let graph =
         build_fuzzy_simplicial_set(&knn_indices, &knn_dist, effective_k, evoc_params.symmetrise);
     let adj = coo_to_adjacency_list(&graph);
-
     if verbose {
         println!(
-            " Construction of fuzzy simplicial set done in {:.2?}.",
-            start_all.elapsed()
+            "Fuzzy simplicial set done in {:.2?}.",
+            start_graph.elapsed()
         );
     }
 
+    // 3. Embedding dimensionality
     let dim = evoc_params
         .embedding_dim
-        .unwrap_or_else(|| (evoc_params.n_neighbours / 4).clamp(4, 16));
+        .unwrap_or_else(|| (evoc_params.n_neighbours / 4).clamp(4, 15));
+
+    // 4. Label propagation initialisation
+    let start_init = Instant::now();
+    let n = data.nrows();
+    let d = data.ncols();
+    let data_vecs: Vec<Vec<T>> = (0..n)
+        .map(|i| (0..d).map(|j| data[(i, j)]).collect())
+        .collect();
 
     if verbose {
+        println!("Computing label propagation initialisation...");
+    }
+    let initial_embedding = crate::graph::label_prop::label_propagation_init(
+        &graph,
+        dim,
+        Some(&data_vecs),
+        seed as u64,
+        verbose,
+    );
+    if verbose {
+        println!("Label prop init done in {:.2?}.", start_init.elapsed());
+    }
+
+    // 5. Node embedding
+    if verbose {
         println!(
-            "Computing {}-dimensional node embedding ({} epochs)...",
+            "Computing {}-d node embedding ({} epochs)...",
             dim, evoc_params.n_epochs
         );
     }
-
+    let start_embed = Instant::now();
     let embed_params = EvocEmbeddingParams {
         n_epochs: evoc_params.n_epochs,
         noise_level: evoc_params.noise_level,
@@ -235,5 +259,142 @@ where
         ..EvocEmbeddingParams::default()
     };
 
-    let embd = evoc_embedding(&adj, dim, &embed_params, None, seed as u64, verbose);
+    let embedding = evoc_embedding(
+        &adj,
+        dim,
+        &embed_params,
+        Some(&initial_embedding),
+        seed as u64,
+        verbose,
+    );
+    if verbose {
+        println!("Embedding done in {:.2?}.", start_embed.elapsed());
+    }
+
+    // 6. Clustering
+    if verbose {
+        println!("Running density-based clustering...");
+    }
+    let start_cluster = Instant::now();
+
+    let (cluster_layers, membership_strengths, persistence_scores) =
+        if let Some(target_k) = evoc_params.approx_n_clusters {
+            let (labels, strengths) =
+                search_for_n_clusters(&embedding, evoc_params.min_samples, target_k);
+            (vec![labels], vec![strengths], vec![0.0])
+        } else {
+            crate::clustering::persistence::build_cluster_layers(
+                &embedding,
+                evoc_params.min_samples,
+                evoc_params.base_min_cluster_size,
+                evoc_params.min_similarity_threshold,
+                evoc_params.max_layers,
+            )
+        };
+
+    if verbose {
+        let n_layers = cluster_layers.len();
+        println!(
+            "Clustering done in {:.2?}: {} layer(s).",
+            start_cluster.elapsed(),
+            n_layers,
+        );
+        println!("EVoC total: {:.2?}.", start_all.elapsed());
+    }
+
+    EvocResult {
+        cluster_layers,
+        membership_strengths,
+        persistence_scores,
+        nn_indices: knn_indices,
+        nn_distances: knn_dist,
+    }
+}
+
+/// Binary search over `min_cluster_size` to find approximately `target_k`
+/// clusters. Matches the Python `_binary_search_for_n_clusters`: builds the
+/// MST and linkage tree once, then re-condenses at different thresholds.
+pub fn search_for_n_clusters<T>(
+    embedding: &[Vec<T>],
+    min_samples: usize,
+    target_k: usize,
+) -> (Vec<i64>, Vec<T>)
+where
+    T: EvocFloat,
+{
+    use crate::clustering::condensed_tree::*;
+    use crate::clustering::linkage::mst_to_linkage_tree;
+    use crate::clustering::mst::build_mst;
+
+    let n = embedding.len();
+    if n == 0 {
+        return (Vec::new(), Vec::new());
+    }
+
+    let mut mst = build_mst(embedding, min_samples);
+    let linkage = mst_to_linkage_tree(&mut mst, n);
+
+    let mut lo = 2usize;
+    let mut hi = n / 2;
+
+    // Evaluate bounds
+    let ct_lo = condense_tree(&linkage, n, lo);
+    let leaves_lo = extract_leaves(&ct_lo);
+    let lo_k = leaves_lo.len();
+
+    let ct_hi = condense_tree(&linkage, n, hi);
+    let leaves_hi = extract_leaves(&ct_hi);
+    let hi_k = leaves_hi.len();
+
+    while hi - lo > 1 {
+        let mid = (lo + hi) / 2;
+        if mid == lo || mid == hi {
+            break;
+        }
+
+        let ct_mid = condense_tree(&linkage, n, mid);
+        let leaves_mid = extract_leaves(&ct_mid);
+        let mid_k = leaves_mid.len();
+
+        if mid_k < target_k {
+            // Need more clusters -> smaller min_cluster_size
+            hi = mid;
+        } else {
+            // Have enough or too many -> larger min_cluster_size
+            lo = mid;
+        }
+    }
+
+    // Pick whichever bound is closer to target
+    let ct_lo = condense_tree(&linkage, n, lo);
+    let leaves_lo = extract_leaves(&ct_lo);
+    let labels_lo = get_cluster_label_vector(&ct_lo, &leaves_lo, n);
+    let lo_k = leaves_lo.len();
+
+    let ct_hi = condense_tree(&linkage, n, hi);
+    let leaves_hi = extract_leaves(&ct_hi);
+    let labels_hi = get_cluster_label_vector(&ct_hi, &leaves_hi, n);
+    let hi_k = leaves_hi.len();
+
+    let lo_diff = (lo_k as isize - target_k as isize).unsigned_abs();
+    let hi_diff = (hi_k as isize - target_k as isize).unsigned_abs();
+
+    if lo_diff < hi_diff {
+        let strengths = get_point_membership_strengths(&ct_lo, &leaves_lo, &labels_lo);
+        (labels_lo, strengths)
+    } else if hi_diff < lo_diff {
+        let strengths = get_point_membership_strengths(&ct_hi, &leaves_hi, &labels_hi);
+        (labels_hi, strengths)
+    } else {
+        // Tie: prefer whichever has more non-noise points (matches Python)
+        let lo_assigned = labels_lo.iter().filter(|&&l| l >= 0).count();
+        let hi_assigned = labels_hi.iter().filter(|&&l| l >= 0).count();
+        if lo_assigned >= hi_assigned {
+            let strengths = get_point_membership_strengths(&ct_lo, &leaves_lo, &labels_lo);
+            (labels_lo, strengths)
+        } else {
+            let strengths = get_point_membership_strengths(&ct_hi, &leaves_hi, &labels_hi);
+            (labels_hi, strengths)
+        }
+    }
 }

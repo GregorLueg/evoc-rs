@@ -5,5 +5,6 @@
 //! use evoc_rs::prelude::*;
 //! ```
 
+pub use crate::graph::EvocEmbeddingParams;
 pub use crate::utils::sparse::CoordinateList;
 pub use crate::utils::traits::EvocFloat;

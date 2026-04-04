@@ -2,7 +2,7 @@
 //!
 //! Converts a single-linkage dendrogram into a condensed tree by collapsing
 //! splits where either child is smaller than `min_cluster_size`. The result
-//! tracks how clusters persist across the lambda (1/distance) scale. Leaf
+//! tracks how clusters persist across the lambda (1 / dist) scale. Leaf
 //! clusters in the condensed tree are the final cluster candidates; points
 //! not belonging to any selected cluster are labelled noise (-1).
 
@@ -122,7 +122,8 @@ fn eliminate_branch<T>(
 ///
 /// ### Returns
 ///
-/// A [`CondensedTree`] whose leaf clusters are candidates for final cluster selection
+/// A [`CondensedTree`] whose leaf clusters are candidates for final cluster
+/// selection
 pub fn condense_tree<T>(
     linkage: &[LinkageRow<T>],
     n_samples: usize,
@@ -138,7 +139,8 @@ where
         };
     }
 
-    let root = 2 * linkage.len(); // == 2*n_samples - 2, the root node index
+    // 2*n_samples - 2, the root node index
+    let root = 2 * linkage.len();
 
     // BFS traversal order from root
     let traversal = collect_descendants(linkage, root, n_samples);
@@ -475,6 +477,10 @@ where
 
     result
 }
+
+///////////
+// Tests //
+///////////
 
 #[cfg(test)]
 mod tests {
