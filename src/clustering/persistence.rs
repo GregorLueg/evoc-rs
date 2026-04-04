@@ -59,7 +59,11 @@ where
         return Vec::new();
     }
 
-    let max_child = cluster_nodes.iter().map(|n| n.child).max().unwrap();
+    let max_child = cluster_nodes
+        .iter()
+        .map(|n| n.child)
+        .reduce(usize::max)
+        .unwrap();
     let n_nodes = max_child - n_points + 1;
 
     let mut barcodes = vec![
@@ -437,14 +441,16 @@ where
         let na = all_labels[a]
             .iter()
             .filter(|&&l| l >= 0)
-            .max()
-            .unwrap_or(&-1)
+            .copied()
+            .reduce(i64::max)
+            .unwrap_or(-1)
             + 1;
         let nb = all_labels[b]
             .iter()
             .filter(|&&l| l >= 0)
-            .max()
-            .unwrap_or(&-1)
+            .copied()
+            .reduce(i64::max)
+            .unwrap_or(-1)
             + 1;
         nb.cmp(&na)
     });

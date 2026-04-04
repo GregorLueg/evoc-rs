@@ -103,7 +103,7 @@ fn label_prop_iteration<T: EvocFloat>(csr: &Csr<T>, labels: &[i64]) -> Vec<i64> 
 /// * `seed`   - Base RNG seed; each unlabelled node derives its own seed via
 ///   `seed + i` to keep assignments deterministic and independent
 fn label_outliers<T: EvocFloat>(csr: &Csr<T>, labels: &mut [i64], seed: u64) {
-    let max_label = match labels.iter().copied().max() {
+    let max_label = match labels.iter().copied().reduce(i64::max) {
         Some(m) if m >= 0 => m,
         _ => return, // nothing labelled at all, nothing to propagate from
     };
