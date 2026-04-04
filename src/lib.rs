@@ -65,8 +65,6 @@ pub struct EvocParams<T> {
     pub min_similarity_threshold: f64,
     /// Maximum number of cluster layers to return.
     pub max_layers: usize,
-    /// Distance metric for kNN. Typically `"cosine"`.
-    pub metric: String,
 }
 
 /// Default implementation
@@ -84,7 +82,6 @@ impl<T: EvocFloat> Default for EvocParams<T> {
             approx_n_clusters: None,
             min_similarity_threshold: 0.2,
             max_layers: 10,
-            metric: "cosine".to_string(),
         }
     }
 }
@@ -156,8 +153,6 @@ impl<T: EvocFloat> EvocResult<T> {
 //////////
 
 /// Run EVoC clustering on high-dimensional embedding data.
-///
-/// # Pipeline
 ///
 /// 1. **kNN graph** — builds an approximate nearest-neighbour graph via the
 ///    selected ANN backend (`ann_type`), or uses `precomputed_knn` if
