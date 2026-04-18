@@ -40,6 +40,7 @@ pub fn make_blobs(
 }
 
 /// Count the number of distinct non-noise clusters in a label vector.
+#[allow(dead_code)] // clippy being stupid
 pub fn count_clusters(labels: &[i64]) -> usize {
     labels
         .iter()

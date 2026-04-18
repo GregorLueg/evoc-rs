@@ -15,12 +15,13 @@ without requiring you to specify the number of clusters up front.
 This crate is a port of the original Python implementation by Leland McInnes at
 the [Tutte Institute](https://github.com/TutteInstitute/evoc), extended with
 support for multiple approximate nearest neighbour backends via
-[ann-search-rs](https://crates.io/crates/ann-search-rs).
+[ann-search-rs](https://crates.io/crates/ann-search-rs), including optional
+GPU-accelerated kNN via [cubecl](https://crates.io/crates/cubecl).
 
 ## How it works
 
 1. **kNN graph** — approximate nearest-neighbour search via a selectable ANN
-   backend (NNDescent, HNSW, or a precomputed graph).
+   backend (NNDescent, HNSW, or a precomputed graph). Optionally GPU-accelerated.
 2. **Fuzzy simplicial set** — the kNN graph is smoothed and symmetrised into a
    weighted undirected graph.
 3. **Node embedding** — a low-dimensional layout is optimised using the EVoC
@@ -42,6 +43,13 @@ Just add the dependency to your `cargo.toml` file:
 evoc-rs = "*"
 ```
 
+To enable GPU-accelerated kNN search:
+
+```toml
+[dependencies]
+evoc-rs = { version = "*", features = ["gpu"] }
+```
+
 ## Usage
 
 Here is how you would use it.
@@ -53,7 +61,6 @@ use manifolds_rs::data::nearest_neighbours::NearestNeighbourParams;
 // data is a faer MatRef<f32> with shape (n_points, n_features)
 let params = EvocParams::default();
 let nn_params = NearestNeighbourParams::default();
-
 let result = evoc(
     data.as_ref(),
     "nndescent".to_string(),
@@ -82,6 +89,46 @@ let params = EvocParams {
     ..EvocParams::default()
 };
 ```
+
+### GPU-accelerated kNN (requires `gpu` feature)
+
+For larger datasets, the nearest neighbour search is typically the bottleneck.
+With the `gpu` feature, kNN runs on the GPU via `cubecl` (backends: Vulkan,
+Metal, DX12 through wgpu, or CUDA). Graph construction, embedding, MST and
+persistence analysis remain on the CPU.
+
+```rust
+use evoc_rs::{evoc_gpu, EvocParams};
+use manifolds_rs::data::nearest_neighbours_gpu::NearestNeighbourParamsGpu;
+use cubecl::wgpu::{WgpuDevice, WgpuRuntime};
+
+// data is a faer MatRef<f32> (f32 only — see note below)
+let params = EvocParams::<f32>::default();
+let nn_params = NearestNeighbourParamsGpu::<f32>::default();
+let device = WgpuDevice::default();
+
+let result = evoc_gpu::<f32, WgpuRuntime>(
+    data.as_ref(),
+    "ivf_gpu".to_string(),   // "exhaustive_gpu", "ivf_gpu", or "nndescent_gpu"
+    None,
+    &params,
+    &nn_params,
+    device,
+    42,
+    true,
+);
+
+let labels = result.best_labels();
+```
+
+A note on precision: GPU computation runs in `f32`. WGSL (the wgpu shader
+language) has no `f64`, and `f64` throughput on consumer GPUs is typically
+1/32 to 1/64 of `f32` regardless. If you need double precision, stick to the
+CPU path. GPU results are also not bit-reproducible across runs due to
+non-deterministic parallel reduction order; structural quality is consistent.
+
+To use CUDA instead of wgpu, swap `WgpuRuntime`/`WgpuDevice` for
+`CudaRuntime`/`CudaDevice` from `cubecl::cuda`.
 
 ## Credits
 
