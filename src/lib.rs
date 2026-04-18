@@ -25,6 +25,15 @@ use manifolds_rs::PreComputedKnn;
 use manifolds_rs::data::nearest_neighbours::*;
 use std::time::Instant;
 
+#[cfg(feature = "gpu")]
+use ann_search_rs::gpu::nndescent_gpu::NNDescentGpu;
+#[cfg(feature = "gpu")]
+use ann_search_rs::gpu::traits_gpu::AnnSearchGpuFloat;
+#[cfg(feature = "gpu")]
+use cubecl::prelude::*;
+#[cfg(feature = "gpu")]
+use manifolds_rs::data::nearest_neighbours_gpu::*;
+
 use crate::clustering::condensed_tree::*;
 use crate::clustering::linkage::mst_to_linkage_tree;
 use crate::clustering::mst::build_mst;
@@ -432,5 +441,190 @@ where
             let strengths = get_point_membership_strengths(&ct_hi, &leaves_hi, &labels_hi);
             (labels_hi, strengths)
         }
+    }
+}
+
+/////////////////
+// GPU version //
+/////////////////
+
+/// Run EVoC clustering with GPU-accelerated kNN search.
+///
+/// Identical to [`evoc`] except the kNN graph is constructed on the GPU via
+/// `manifolds-rs`'s GPU ANN backends. Fuzzy graph construction, node
+/// embedding, MST and persistence analysis all remain on the CPU.
+///
+/// ### Params
+///
+/// * `data` — input matrix with shape `(n_points, n_features)`.
+/// * `ann_type` — GPU ANN backend: `"exhaustive_gpu"`, `"ivf_gpu"` or
+///   `"nndescent_gpu"`.
+/// * `precomputed_knn` — pre-built `(indices, distances)` pair; pass `None`
+///   to build the graph on the GPU.
+/// * `evoc_params` — clustering hyperparameters; see [`EvocParams`].
+/// * `nn_params` — GPU nearest-neighbour search parameters.
+/// * `device` — GPU device.
+/// * `seed` — random seed for reproducibility.
+/// * `verbose` — print progress and timing to stdout.
+///
+/// ### Returns
+///
+/// An [`EvocResult`] containing cluster layers, membership strengths,
+/// persistence scores, and the kNN graph.
+#[allow(clippy::too_many_arguments)]
+#[cfg(feature = "gpu")]
+pub fn evoc_gpu<T, R>(
+    data: MatRef<T>,
+    ann_type: String,
+    precomputed_knn: PreComputedKnn<T>,
+    evoc_params: &EvocParams<T>,
+    nn_params: &NearestNeighbourParamsGpu<T>,
+    device: R::Device,
+    seed: usize,
+    verbose: bool,
+) -> EvocResult<T>
+where
+    T: EvocFloat + AnnSearchFloat + AnnSearchGpuFloat,
+    R: Runtime,
+    NNDescentGpu<T, R>: NNDescentQuery<T>,
+{
+    let start_all = Instant::now();
+
+    // 1. kNN graph (GPU)
+    let (knn_indices, knn_dist) = match precomputed_knn {
+        Some((indices, distances)) => {
+            if verbose {
+                println!("Using precomputed kNN graph...");
+            }
+            (indices, distances)
+        }
+        None => {
+            if verbose {
+                println!("Running GPU nearest neighbour search using {}...", ann_type);
+            }
+            let start_knn = Instant::now();
+            let result = run_ann_search_gpu::<T, R>(
+                data,
+                evoc_params.n_neighbours,
+                ann_type,
+                nn_params,
+                device,
+                seed,
+                verbose,
+            );
+            if verbose {
+                println!("GPU kNN search done in {:.2?}.", start_knn.elapsed());
+            }
+            result
+        }
+    };
+
+    // 2. Fuzzy simplicial set
+    if verbose {
+        println!("Constructing fuzzy simplicial set...");
+    }
+    let start_graph = Instant::now();
+    let effective_k = evoc_params.neighbour_scale * T::from(evoc_params.n_neighbours).unwrap();
+    let graph =
+        build_fuzzy_simplicial_set(&knn_indices, &knn_dist, effective_k, evoc_params.symmetrise);
+    let adj = coo_to_adjacency_list(&graph);
+    if verbose {
+        println!(
+            "Fuzzy simplicial set done in {:.2?}.",
+            start_graph.elapsed()
+        );
+    }
+
+    // 3. Embedding dimensionality
+    let dim = evoc_params
+        .embedding_dim
+        .unwrap_or_else(|| (evoc_params.n_neighbours / 4).clamp(4, 16));
+
+    // 4. Label propagation initialisation
+    let start_init = Instant::now();
+    let n = data.nrows();
+    let d = data.ncols();
+    let data_vecs: Vec<Vec<T>> = (0..n)
+        .map(|i| (0..d).map(|j| data[(i, j)]).collect())
+        .collect();
+
+    if verbose {
+        println!("Computing label propagation initialisation...");
+    }
+    let initial_embedding = crate::graph::label_prop::label_propagation_init(
+        &graph,
+        dim,
+        Some(&data_vecs),
+        seed as u64,
+        verbose,
+    );
+    if verbose {
+        println!("Label prop init done in {:.2?}.", start_init.elapsed());
+    }
+
+    // 5. Node embedding
+    if verbose {
+        println!(
+            "Computing {}-d node embedding ({} epochs)...",
+            dim, evoc_params.n_epochs
+        );
+    }
+    let start_embed = Instant::now();
+    let embed_params = EvocEmbeddingParams {
+        n_epochs: evoc_params.n_epochs,
+        noise_level: evoc_params.noise_level,
+        initial_alpha: T::from(0.1).unwrap(),
+        ..EvocEmbeddingParams::default()
+    };
+
+    let embedding = evoc_embedding(
+        &adj,
+        dim,
+        &embed_params,
+        Some(&initial_embedding),
+        seed as u64,
+        verbose,
+    );
+    if verbose {
+        println!("Embedding done in {:.2?}.", start_embed.elapsed());
+    }
+
+    // 6. Clustering
+    if verbose {
+        println!("Running density-based clustering...");
+    }
+    let start_cluster = Instant::now();
+
+    let (cluster_layers, membership_strengths, persistence_scores) =
+        if let Some(target_k) = evoc_params.approx_n_clusters {
+            let (labels, strengths) =
+                search_for_n_clusters(&embedding, evoc_params.min_samples, target_k);
+            (vec![labels], vec![strengths], vec![0.0])
+        } else {
+            build_cluster_layers(
+                &embedding,
+                evoc_params.min_samples,
+                evoc_params.base_min_cluster_size,
+                evoc_params.min_similarity_threshold,
+                evoc_params.max_layers,
+            )
+        };
+
+    if verbose {
+        let n_layers = cluster_layers.len();
+        println!(
+            "Clustering done in {:.2?}: {} layer(s).",
+            start_cluster.elapsed(),
+            n_layers,
+        );
+        println!("EVoC (GPU) total: {:.2?}.", start_all.elapsed());
+    }
+
+    EvocResult {
+        cluster_layers,
+        membership_strengths,
+        persistence_scores,
+        nn_indices: knn_indices,
+        nn_distances: knn_dist,
     }
 }

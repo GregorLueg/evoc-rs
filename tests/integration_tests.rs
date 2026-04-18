@@ -12,10 +12,6 @@ use evoc_rs::clustering::persistence::*;
 use evoc_rs::graph::EvocEmbeddingParams;
 use evoc_rs::graph::embedding::*;
 
-// =========================================================================
-// Stage 1: MST on known clusters
-// =========================================================================
-
 /// Two tight clusters far apart. The MST should have exactly one long
 /// inter-cluster edge and all other edges should be short.
 #[test]
@@ -78,10 +74,6 @@ fn integration_01c_mst_mutual_reachability_inflates() {
     );
 }
 
-// =========================================================================
-// Stage 2: Linkage tree properties
-// =========================================================================
-
 /// Linkage distances must be monotonically non-decreasing (single linkage
 /// property). Sizes must sum to n at the final merge.
 #[test]
@@ -107,10 +99,6 @@ fn integration_02_linkage_monotonic() {
     // Final merge should encompass all points
     assert_eq!(linkage.last().unwrap().size, n);
 }
-
-// =========================================================================
-// Stage 3: Condensed tree + cluster extraction
-// =========================================================================
 
 /// Two well-separated clusters with min_cluster_size=2 should yield exactly
 /// 2 leaf clusters.
@@ -200,10 +188,6 @@ fn integration_03d_membership_strengths_valid() {
     }
 }
 
-// =========================================================================
-// Stage 4: build_cluster_layers
-// =========================================================================
-
 #[test]
 fn integration_04_build_cluster_layers_two_clusters() {
     let (data, gt) = make_blobs(50, 2, 4, 50.0, 0.5, 42);
@@ -263,10 +247,6 @@ fn integration_04c_layers_sorted_descending() {
         }
     }
 }
-
-// =========================================================================
-// Stage 5: search_for_n_clusters (requires the fn to be pub or #[cfg(test)])
-// =========================================================================
 
 /// Request exactly 2 clusters from 2-cluster data.
 #[test]
@@ -352,10 +332,6 @@ fn integration_05b_search_for_n_clusters_five() {
     );
 }
 
-// =========================================================================
-// Stage 6: Persistence analysis
-// =========================================================================
-
 /// Barcode should not be empty for multi-cluster data.
 #[test]
 fn integration_06_barcode_non_empty() {
@@ -390,10 +366,6 @@ fn integration_06b_persistence_non_negative() {
         "Persistence values must be non-negative"
     );
 }
-
-// =========================================================================
-// Stage 7: Embedding quality (fuzzy graph -> embedding -> clustering)
-// =========================================================================
 
 /// Full embedding pipeline on well-separated low-d blobs. The embedding
 /// should preserve cluster structure well enough for the MST-based
@@ -466,10 +438,6 @@ fn integration_07_embedding_preserves_clusters() {
     );
 }
 
-// =========================================================================
-// Stage 8: Reproducibility
-// =========================================================================
-
 /// Same data + same seed should produce identical MST.
 #[test]
 fn integration_08_mst_reproducibility() {
@@ -532,10 +500,6 @@ fn integration_08b_embedding_reproducibility() {
     }
 }
 
-// =========================================================================
-// Stage 9: Edge cases
-// =========================================================================
-
 /// Single cluster should produce 1 cluster (or 0 if min_cluster_size > n).
 #[test]
 fn integration_09_single_cluster() {
@@ -576,10 +540,6 @@ fn integration_09c_identical_points() {
         assert!(e.weight >= 0.0, "MST weight should be non-negative");
     }
 }
-
-// =========================================================================
-// Stage 10: Fuzzy graph sanity
-// =========================================================================
 
 /// Intra-cluster edges should have higher weights than inter-cluster edges
 /// on average.
