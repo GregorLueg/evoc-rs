@@ -1,5 +1,12 @@
 # News
 
+## 0.1.3
+
+**Features:**
+
+- Version bump to latest version of `manifolds-rs` and `ann-search-rs`. In the
+  former case, proper error handling is now occuring.
+
 ## 0.1.2
 
 **Features:**
