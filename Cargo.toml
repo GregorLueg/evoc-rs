@@ -15,11 +15,11 @@ path = "src/lib.rs"
 gpu = ["manifolds-rs/gpu", "ann-search-rs/gpu", "cubecl"]
 
 [dependencies]
-ann-search-rs = "0.2.14"
+ann-search-rs = "0.2.15"
 approx = "0.5.1"
 faer = "0.23.2"
 faer-traits = "0.23.2"
-manifolds-rs = "0.2.2"
+manifolds-rs = "0.2.3"
 num-traits = "0.2.19"
 rand = "0.10.0"
 rayon = "1.11.0"
