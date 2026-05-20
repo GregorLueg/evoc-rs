@@ -36,7 +36,8 @@ fn gpu_integration_01_two_clusters_exhaustive() {
         device,
         42,
         false,
-    );
+    )
+    .unwrap();
 
     assert!(!result.cluster_layers.is_empty());
     let labels = result.best_labels();
@@ -69,7 +70,8 @@ fn gpu_integration_02_two_clusters_ivf() {
         device,
         42,
         false,
-    );
+    )
+    .unwrap();
 
     let labels = result.best_labels();
     let acc = cluster_accuracy(labels, &gt);
@@ -97,7 +99,8 @@ fn gpu_integration_03_all_backends_dispatch() {
             device,
             42,
             false,
-        );
+        )
+        .unwrap();
         assert!(
             !result.cluster_layers.is_empty(),
             "{} produced no layers",
@@ -130,7 +133,8 @@ fn gpu_integration_04_structural_agreement_with_cpu() {
         &nn_cpu,
         42,
         false,
-    );
+    )
+    .unwrap();
 
     let nn_gpu = NearestNeighbourParamsGpu::<f32>::default();
     let device = WgpuDevice::default();
@@ -143,7 +147,8 @@ fn gpu_integration_04_structural_agreement_with_cpu() {
         device,
         42,
         false,
-    );
+    )
+    .unwrap();
 
     let acc_cpu = cluster_accuracy(cpu.best_labels(), &gt);
     let acc_gpu = cluster_accuracy(gpu.best_labels(), &gt);
@@ -181,7 +186,8 @@ fn gpu_integration_05_precomputed_knn() {
         device,
         42,
         false,
-    );
+    )
+    .unwrap();
 
     let params = EvocParams::<f32> {
         n_neighbours: k,
@@ -198,7 +204,8 @@ fn gpu_integration_05_precomputed_knn() {
         device2,
         42,
         false,
-    );
+    )
+    .unwrap();
 
     let acc = cluster_accuracy(result.best_labels(), &gt);
     assert!(acc > 0.6, "Precomputed-kNN accuracy {:.3} too low", acc);
@@ -228,7 +235,8 @@ fn gpu_integration_06_approx_n_clusters() {
         device,
         42,
         false,
-    );
+    )
+    .unwrap();
 
     assert_eq!(
         result.cluster_layers.len(),
@@ -260,7 +268,8 @@ fn gpu_integration_07_knn_no_self() {
         device,
         42,
         false,
-    );
+    )
+    .unwrap();
 
     let mut self_loops = 0;
     for (i, nb) in result.nn_indices.iter().enumerate() {
