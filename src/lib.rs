@@ -13,6 +13,7 @@
 #![warn(missing_docs)]
 
 pub mod clustering;
+pub mod errors;
 pub mod graph;
 pub mod prelude;
 pub mod utils;
@@ -199,7 +200,7 @@ pub fn evoc<T>(
     nn_params: &NearestNeighbourParams<T>,
     seed: usize,
     verbose: bool,
-) -> EvocResult<T>
+) -> Result<EvocResult<T>, EvocErrors>
 where
     T: EvocFloat + AnnSearchFloat,
     NNDescent<T>: ApplySortedUpdates<T> + NNDescentQuery<T>,
@@ -230,7 +231,7 @@ where
                 nn_params,
                 seed,
                 verbose,
-            );
+            )?;
             if verbose {
                 println!("kNN search done in {:.2?}.", start_knn.elapsed());
             }
@@ -340,13 +341,13 @@ where
         println!("EVoC total: {:.2?}.", start_all.elapsed());
     }
 
-    EvocResult {
+    Ok(EvocResult {
         cluster_layers,
         membership_strengths,
         persistence_scores,
         nn_indices: knn_indices,
         nn_distances: knn_dist,
-    }
+    })
 }
 
 /// Binary-searches over `min_cluster_size` to find approximately `target_k`
@@ -482,7 +483,7 @@ pub fn evoc_gpu<T, R>(
     device: R::Device,
     seed: usize,
     verbose: bool,
-) -> EvocResult<T>
+) -> Result<EvocResult<T>, EvocErrors>
 where
     T: EvocFloat + AnnSearchFloat + AnnSearchGpuFloat,
     R: Runtime,
@@ -511,7 +512,7 @@ where
                 device,
                 seed,
                 verbose,
-            );
+            )?;
             if verbose {
                 println!("GPU kNN search done in {:.2?}.", start_knn.elapsed());
             }
@@ -620,11 +621,11 @@ where
         println!("EVoC (GPU) total: {:.2?}.", start_all.elapsed());
     }
 
-    EvocResult {
+    Ok(EvocResult {
         cluster_layers,
         membership_strengths,
         persistence_scores,
         nn_indices: knn_indices,
         nn_distances: knn_dist,
-    }
+    })
 }

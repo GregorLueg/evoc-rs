@@ -1,5 +1,18 @@
 # News
 
+## 0.1.5
+
+**Features:**
+
+- Version bumps to latest `ann-search-rs` + improved error handling.
+
+## 0.1.4
+
+**Features:**
+
+- Version bumps
+- Updated CI/CD for release
+
 ## 0.1.3
 
 **Features:**

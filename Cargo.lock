@@ -49,9 +49,9 @@ checksum = "4b46cbb362ab8752921c97e041f5e366ee6297bd428a31275b9fcf1e380f7299"
 
 [[package]]
 name = "ann-search-rs"
-version = "0.2.15"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89ab79fa0ad824cfc7a0e39bc629edd5cf355afc16fe702be754c605d1607f27"
+checksum = "64295bb1d86d0b61eef3be6d9e211912f2ae2ed32e5cb425e9253a179a35d483"
 dependencies = [
  "approx",
  "clap",
@@ -66,6 +66,7 @@ dependencies = [
  "rayon",
  "rdst",
  "rustc-hash 2.1.2",
+ "thiserror 2.0.18",
  "thousands",
  "wide",
 ]
@@ -1335,7 +1336,7 @@ dependencies = [
 
 [[package]]
 name = "evoc-rs"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "ann-search-rs",
  "approx",
@@ -1347,6 +1348,7 @@ dependencies = [
  "rand 0.10.1",
  "rayon",
  "rustc-hash 2.1.2",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -2416,9 +2418,9 @@ dependencies = [
 
 [[package]]
 name = "manifolds-rs"
-version = "0.2.3"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9302aa1a77f483997032ea95dadce774b4aed2c144c8361bf484e45659e2ef10"
+checksum = "bccbb47254b8fb3d90699da94d98e3daac66474b75f722ae94ce686cc44cadba"
 dependencies = [
  "ann-search-rs",
  "approx",
@@ -4661,9 +4663,9 @@ dependencies = [
 
 [[package]]
 name = "wide"
-version = "1.3.0"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9479f84a757f819cfab37295955906479181395de83add28f74975fde083141"
+checksum = "9a7714cd0430a663154667c74da5d09325c2387695bee18b3f7f72825aa3693a"
 dependencies = [
  "bytemuck",
  "safe_arch",
