@@ -53,38 +53,30 @@ where
     }
 
     let mut linkage = Vec::with_capacity(n_merges);
-    let mut next_label = n_samples;
 
-    for edge in mst.iter() {
+    for (i, edge) in mst.iter().enumerate() {
+        let next_label = n_samples + i;
         let mut left = edge.u;
         let mut right = edge.v;
-
-        // chase up to current root label
         while parent[left] != usize::MAX {
             left = parent[left];
         }
         while parent[right] != usize::MAX {
             right = parent[right];
         }
-
         let new_size = size[left] + size[right];
-
-        // convention: larger index first (matches Python)
         if left < right {
             std::mem::swap(&mut left, &mut right);
         }
-
         linkage.push(LinkageRow {
             left,
             right,
             distance: edge.weight,
             size: new_size,
         });
-
         parent[left] = next_label;
         parent[right] = next_label;
         size[next_label] = new_size;
-        next_label += 1;
     }
 
     linkage
