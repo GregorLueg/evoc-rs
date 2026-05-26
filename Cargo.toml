@@ -19,7 +19,7 @@ ann-search-rs = "0.4.0"
 approx = "0.5.1"
 faer = "0.23.2"
 faer-traits = "0.23.2"
-manifolds-rs = { git = "https://github.com/GregorLueg/manifolds-rs.git", branch = "v0.2.6"}
+manifolds-rs = { version = "0.3.0" }
 num-traits = "0.2.19"
 rand = "0.10.0"
 rayon = "1.11.0"
