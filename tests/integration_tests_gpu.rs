@@ -39,9 +39,30 @@ fn gpu_integration_01_two_clusters_exhaustive() {
     )
     .unwrap();
 
+    // debug
+    let gt = &gt; // ground truth from make_blobs
+    let mut impure = 0usize;
+    for (i, nb) in result.nn_indices.iter().enumerate() {
+        let bad = nb.iter().filter(|&&j| gt[j] != gt[i]).count();
+        if bad > 0 {
+            impure += 1;
+            if impure <= 5 {
+                println!(
+                    "point {} (cluster {}): {} cross-cluster neighbours",
+                    i, gt[i], bad
+                );
+            }
+        }
+    }
+    println!(
+        "{}/{} points have impure neighbourhoods",
+        impure,
+        result.nn_indices.len()
+    );
+
     assert!(!result.cluster_layers.is_empty());
     let labels = result.best_labels();
-    let acc = cluster_accuracy(labels, &gt);
+    let acc = cluster_accuracy(labels, gt);
     println!("Two-cluster accuracy (exhaustive_gpu): {:.3}", acc);
     assert!(acc > 0.95, "Accuracy {:.3} below threshold", acc);
 }
