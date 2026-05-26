@@ -20,7 +20,7 @@ fn to_mat(data: &[Vec<f64>]) -> Mat<f32> {
 /// End-to-end GPU EVoC on well-separated blobs should recover clusters.
 #[test]
 fn gpu_integration_01_two_clusters_exhaustive() {
-    let (data, gt) = make_blobs(50, 2, 4, 100.0, 0.5, 42);
+    let (data, gt) = make_blobs(100, 2, 4, 100.0, 0.5, 42);
     let mat = to_mat(&data);
 
     let params = EvocParams::<f32>::default();
@@ -55,7 +55,7 @@ fn gpu_integration_02_two_clusters_ivf() {
     let params = EvocParams::<f32>::default();
     let nn_params = NearestNeighbourParamsGpu::<f32> {
         n_list: Some(5),
-        n_probes: Some(3),
+        n_probes: Some(5),
         ..NearestNeighbourParamsGpu::default()
     };
 
@@ -82,7 +82,7 @@ fn gpu_integration_02_two_clusters_ivf() {
 /// Dispatch check — all three GPU backends should run without panicking.
 #[test]
 fn gpu_integration_03_all_backends_dispatch() {
-    let (data, _) = make_blobs(80, 3, 4, 50.0, 0.5, 42);
+    let (data, _) = make_blobs(100, 3, 4, 50.0, 0.5, 42);
     let mat = to_mat(&data);
 
     let params = EvocParams::<f32>::default();
@@ -119,7 +119,7 @@ fn gpu_integration_04_structural_agreement_with_cpu() {
     use evoc_rs::evoc;
     use manifolds_rs::data::nearest_neighbours::NearestNeighbourParams;
 
-    let (data, gt) = make_blobs(60, 3, 6, 50.0, 0.5, 42);
+    let (data, gt) = make_blobs(100, 3, 6, 50.0, 0.5, 42);
     let mat = to_mat(&data);
 
     let params = EvocParams::<f32>::default();
@@ -127,7 +127,7 @@ fn gpu_integration_04_structural_agreement_with_cpu() {
     let nn_cpu = NearestNeighbourParams::<f32>::default();
     let cpu = evoc::<f32>(
         mat.as_ref(),
-        "nndescent".to_string(),
+        "kmknn".to_string(),
         None,
         &params,
         &nn_cpu,
@@ -172,7 +172,7 @@ fn gpu_integration_04_structural_agreement_with_cpu() {
 fn gpu_integration_05_precomputed_knn() {
     use manifolds_rs::data::nearest_neighbours_gpu::run_ann_search_gpu;
 
-    let (data, gt) = make_blobs(60, 2, 4, 100.0, 0.5, 42);
+    let (data, gt) = make_blobs(100, 2, 4, 100.0, 0.5, 42);
     let mat = to_mat(&data);
     let k = 15;
 
@@ -214,7 +214,7 @@ fn gpu_integration_05_precomputed_knn() {
 /// approx_n_clusters mode with GPU kNN.
 #[test]
 fn gpu_integration_06_approx_n_clusters() {
-    let (data, _) = make_blobs(80, 4, 4, 40.0, 0.5, 42);
+    let (data, _) = make_blobs(100, 4, 4, 40.0, 0.5, 42);
     let mat = to_mat(&data);
 
     let params = EvocParams::<f32> {
@@ -252,7 +252,7 @@ fn gpu_integration_06_approx_n_clusters() {
 /// concern noted elsewhere — verify here at the EVoC boundary).
 #[test]
 fn gpu_integration_07_knn_no_self() {
-    let (data, _) = make_blobs(50, 2, 4, 30.0, 0.5, 42);
+    let (data, _) = make_blobs(100, 2, 4, 30.0, 0.5, 42);
     let mat = to_mat(&data);
 
     let params = EvocParams::<f32>::default();
