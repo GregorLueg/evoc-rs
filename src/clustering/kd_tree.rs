@@ -91,7 +91,7 @@ impl<T: EvocFloat> KdTree<T> {
     /// * `dim`  - Dimensionality of each point
     /// * `leaf_size` - Maximum points per leaf
     pub fn build(data: &[T], dim: usize, leaf_size: usize) -> Self {
-        let n = if dim == 0 { 0 } else { data.len() / dim };
+        let n = data.len().checked_div(dim).unwrap_or(0);
         let leaf_size = leaf_size.max(1);
 
         if n == 0 {

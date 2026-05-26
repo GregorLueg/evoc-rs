@@ -547,7 +547,7 @@ fn integration_09c_identical_points() {
 fn integration_10_fuzzy_graph_cluster_separation() {
     use evoc_rs::graph::fuzzy_graph::*;
 
-    let (data, labels) = make_blobs(20, 2, 4, 30.0, 0.5, 42);
+    let (data, labels) = make_blobs(100, 2, 4, 30.0, 0.5, 42);
     let n = data.len();
     let k = 8;
 

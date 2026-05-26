@@ -114,7 +114,7 @@ impl<T: EvocFloat> SpaAcc<T> {
 
 /// Coordinate list
 ///
-/// Represents the graph in COO (Coordinate) format - tensor-friendly
+/// Represents the graph in COO (Coordinate) format.
 #[derive(Clone)]
 pub struct CoordinateList<T> {
     /// Row index
