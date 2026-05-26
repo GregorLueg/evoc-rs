@@ -20,7 +20,7 @@ fn to_mat(data: &[Vec<f64>]) -> Mat<f32> {
 /// End-to-end GPU EVoC on well-separated blobs should recover clusters.
 #[test]
 fn gpu_integration_01_two_clusters_exhaustive() {
-    let (data, gt) = make_blobs(50, 2, 4, 50.0, 0.5, 42);
+    let (data, gt) = make_blobs(50, 2, 4, 100.0, 0.5, 42);
     let mat = to_mat(&data);
 
     let params = EvocParams::<f32>::default();
@@ -43,19 +43,19 @@ fn gpu_integration_01_two_clusters_exhaustive() {
     let labels = result.best_labels();
     let acc = cluster_accuracy(labels, &gt);
     println!("Two-cluster accuracy (exhaustive_gpu): {:.3}", acc);
-    assert!(acc > 0.6, "Accuracy {:.3} below threshold", acc);
+    assert!(acc > 0.95, "Accuracy {:.3} below threshold", acc);
 }
 
 /// Same test with ivf_gpu — less precise but should still separate clusters.
 #[test]
 fn gpu_integration_02_two_clusters_ivf() {
-    let (data, gt) = make_blobs(100, 2, 8, 50.0, 0.5, 42);
+    let (data, gt) = make_blobs(100, 2, 8, 100.0, 0.5, 42);
     let mat = to_mat(&data);
 
     let params = EvocParams::<f32>::default();
     let nn_params = NearestNeighbourParamsGpu::<f32> {
         n_list: Some(5),
-        n_probes: Some(2),
+        n_probes: Some(3),
         ..NearestNeighbourParamsGpu::default()
     };
 
@@ -76,13 +76,13 @@ fn gpu_integration_02_two_clusters_ivf() {
     let labels = result.best_labels();
     let acc = cluster_accuracy(labels, &gt);
     println!("Two-cluster accuracy (ivf_gpu): {:.3}", acc);
-    assert!(acc > 0.6, "IVF accuracy {:.3} too low", acc);
+    assert!(acc > 0.95, "IVF accuracy {:.3} too low", acc);
 }
 
 /// Dispatch check — all three GPU backends should run without panicking.
 #[test]
 fn gpu_integration_03_all_backends_dispatch() {
-    let (data, _) = make_blobs(80, 3, 4, 40.0, 0.5, 42);
+    let (data, _) = make_blobs(80, 3, 4, 50.0, 0.5, 42);
     let mat = to_mat(&data);
 
     let params = EvocParams::<f32>::default();
@@ -172,7 +172,7 @@ fn gpu_integration_04_structural_agreement_with_cpu() {
 fn gpu_integration_05_precomputed_knn() {
     use manifolds_rs::data::nearest_neighbours_gpu::run_ann_search_gpu;
 
-    let (data, gt) = make_blobs(60, 2, 4, 50.0, 0.5, 42);
+    let (data, gt) = make_blobs(60, 2, 4, 100.0, 0.5, 42);
     let mat = to_mat(&data);
     let k = 15;
 
@@ -208,7 +208,7 @@ fn gpu_integration_05_precomputed_knn() {
     .unwrap();
 
     let acc = cluster_accuracy(result.best_labels(), &gt);
-    assert!(acc > 0.6, "Precomputed-kNN accuracy {:.3} too low", acc);
+    assert!(acc > 0.95, "Precomputed-kNN accuracy {:.3} too low", acc);
 }
 
 /// approx_n_clusters mode with GPU kNN.
