@@ -1,12 +1,18 @@
 # News
 
-## 0.1.5
+## 0.1.6
 
 **Features:**
 
 - Version bumps to latest `ann-search-rs` + improved error handling.
 - Version bumps to latest `manifolds-rs` crate
 - Bumping CubeCl to `0.10.0`
+
+## 0.1.5
+
+**Features:**
+
+- Version bumps to latest `ann-search-rs` + improved error handling.
 
 ## 0.1.4
 
