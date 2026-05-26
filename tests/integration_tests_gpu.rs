@@ -20,7 +20,7 @@ fn to_mat(data: &[Vec<f64>]) -> Mat<f32> {
 /// End-to-end GPU EVoC on well-separated blobs should recover clusters.
 #[test]
 fn gpu_integration_01_two_clusters_exhaustive() {
-    let (data, gt) = make_blobs(100, 2, 4, 100.0, 0.5, 42);
+    let (data, gt) = make_blobs(100, 2, 8, 100.0, 0.5, 42);
     let mat = to_mat(&data);
 
     let params = EvocParams::<f32>::default();
@@ -82,7 +82,7 @@ fn gpu_integration_02_two_clusters_ivf() {
 /// Dispatch check — all three GPU backends should run without panicking.
 #[test]
 fn gpu_integration_03_all_backends_dispatch() {
-    let (data, _) = make_blobs(100, 3, 4, 50.0, 0.5, 42);
+    let (data, _) = make_blobs(100, 3, 8, 50.0, 0.5, 42);
     let mat = to_mat(&data);
 
     let params = EvocParams::<f32>::default();
@@ -119,7 +119,7 @@ fn gpu_integration_04_structural_agreement_with_cpu() {
     use evoc_rs::evoc;
     use manifolds_rs::data::nearest_neighbours::NearestNeighbourParams;
 
-    let (data, gt) = make_blobs(100, 3, 6, 50.0, 0.5, 42);
+    let (data, gt) = make_blobs(100, 3, 8, 50.0, 0.5, 42);
     let mat = to_mat(&data);
 
     let params = EvocParams::<f32>::default();
@@ -172,7 +172,7 @@ fn gpu_integration_04_structural_agreement_with_cpu() {
 fn gpu_integration_05_precomputed_knn() {
     use manifolds_rs::data::nearest_neighbours_gpu::run_ann_search_gpu;
 
-    let (data, gt) = make_blobs(100, 2, 4, 100.0, 0.5, 42);
+    let (data, gt) = make_blobs(100, 2, 8, 100.0, 0.5, 42);
     let mat = to_mat(&data);
     let k = 15;
 
