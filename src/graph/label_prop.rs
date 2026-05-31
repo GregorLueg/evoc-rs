@@ -365,6 +365,40 @@ fn random_init<T: EvocFloat>(n: usize, n_components: usize, seed: u64) -> Vec<Ve
 // Label propagation //
 ///////////////////////
 
+/// Recursive label-propagation initialisation (inner implementation).
+///
+/// Partitions the graph via seeded label propagation, coarsens both the graph
+/// and optional data, recurses on the coarsened representation, runs a short
+/// node embedding at the coarsened level, then expands the result back to the
+/// full graph by averaging two expansion strategies.
+///
+/// The base case triggers when `n < base_init_threshold`: PCA initialisation
+/// is used if `data` is provided with sufficient dimensionality, otherwise
+/// random initialisation on the unit hypersphere.
+///
+/// ### Params
+///
+/// * `graph` - Weighted adjacency matrix in CSR format
+/// * `n_components` - Embedding dimensionality
+/// * `data` - Optional input data for PCA at the base case; ignored if `None`
+///   or dimensionality is insufficient
+/// * `n_embedding_epochs` - Epochs for the short node embedding at each
+///   coarsened level; clamped to 255 on recursive calls
+/// * `approx_n_parts` - Target partition count passed to
+///   `label_prop_loop`; divided by 4 on each recursive call
+/// * `n_label_prop_iter` - Propagation iterations per call to
+///   `label_prop_loop`
+/// * `base_init_threshold` - Node count below which recursion stops and a
+///   direct initialisation is used instead
+/// * `scaling` - Scalar applied to the final expanded layout
+/// * `seed` - RNG seed; offset by fixed constants at each recursive level to
+///   avoid correlation
+/// * `verbose` - Verbosity level: `0` silent, `1` normal, `2` detailed
+///
+/// ### Returns
+///
+/// A `Vec` of `n` rows each of length `n_components` containing the
+/// initialised embedding coordinates
 #[allow(clippy::too_many_arguments)]
 fn label_prop_init_inner<T: EvocFloat>(
     graph: &Csr<T>,
@@ -376,8 +410,10 @@ fn label_prop_init_inner<T: EvocFloat>(
     base_init_threshold: usize,
     scaling: f64,
     seed: u64,
-    verbose: bool,
+    verbose: usize,
 ) -> Vec<Vec<T>> {
+    let verbosity = parse_verbosity_level(verbose);
+
     let n = graph.nrows;
 
     // Base case
@@ -391,7 +427,7 @@ fn label_prop_init_inner<T: EvocFloat>(
     // 1. Partition via label propagation
     let (partition, n_parts) = label_prop_loop(graph, approx_n_parts, n_label_prop_iter, seed);
 
-    if verbose {
+    if verbosity.normal_verbosity() {
         println!("  Label prop: {} nodes -> {} partitions", n, n_parts);
     }
 
@@ -496,13 +532,14 @@ fn label_prop_init_inner<T: EvocFloat>(
 /// * `n_components` - Embedding dimensionality (typically 4-16)
 /// * `data` - Original data for PCA base case. If `None`, falls back to random.
 /// * `seed` - RNG seed for reproducibility
-/// * `verbose` - Print partition sizes at each recursion level
+/// * `verbose` - If `0` -> silent or `1` for normal verbosity, `2` for detailed
+///   verbosity.
 pub fn label_propagation_init<T: EvocFloat>(
     graph: &CoordinateList<T>,
     n_components: usize,
     data: Option<&[Vec<T>]>,
     seed: u64,
-    verbose: bool,
+    verbose: usize,
 ) -> Vec<Vec<T>> {
     let csr = Csr::from_coo(graph);
     let n = csr.nrows;
@@ -690,7 +727,7 @@ mod tests {
             n_samples: n,
         };
 
-        let result = label_propagation_init(&coo, 4, None, 42, false);
+        let result = label_propagation_init(&coo, 4, None, 42, 0);
         assert_eq!(result.len(), n);
         for row in &result {
             assert_eq!(row.len(), 4);

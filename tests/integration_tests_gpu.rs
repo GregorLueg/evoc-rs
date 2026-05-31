@@ -35,7 +35,7 @@ fn gpu_integration_01_two_clusters_exhaustive() {
         &nn_params,
         device,
         42,
-        false,
+        0,
     )
     .unwrap();
 
@@ -90,7 +90,7 @@ fn gpu_integration_02_two_clusters_ivf() {
         &nn_params,
         device,
         42,
-        false,
+        0,
     )
     .unwrap();
 
@@ -119,7 +119,7 @@ fn gpu_integration_03_all_backends_dispatch() {
             &nn_params,
             device,
             42,
-            false,
+            0,
         )
         .unwrap();
         assert!(
@@ -153,7 +153,7 @@ fn gpu_integration_04_structural_agreement_with_cpu() {
         &params,
         &nn_cpu,
         42,
-        false,
+        0,
     )
     .unwrap();
 
@@ -167,7 +167,7 @@ fn gpu_integration_04_structural_agreement_with_cpu() {
         &nn_gpu,
         device,
         42,
-        false,
+        0,
     )
     .unwrap();
 
@@ -206,7 +206,7 @@ fn gpu_integration_05_precomputed_knn() {
         &nn_params,
         device,
         42,
-        false,
+        0,
     )
     .unwrap();
 
@@ -224,7 +224,7 @@ fn gpu_integration_05_precomputed_knn() {
         &nn_params,
         device2,
         42,
-        false,
+        0,
     )
     .unwrap();
 
@@ -255,7 +255,7 @@ fn gpu_integration_06_approx_n_clusters() {
         &nn_params,
         device,
         42,
-        false,
+        0,
     )
     .unwrap();
 
@@ -288,7 +288,7 @@ fn gpu_integration_07_knn_no_self() {
         &nn_params,
         device,
         42,
-        false,
+        0,
     )
     .unwrap();
 

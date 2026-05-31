@@ -68,7 +68,7 @@ let result = evoc(
     &params,
     &nn_params,
     42,            // seed
-    true,          // verbose
+    1,             // verbose (normal levels)
 );
 
 // Best clustering by persistence score
@@ -115,7 +115,7 @@ let result = evoc_gpu::<f32, WgpuRuntime>(
     &nn_params,
     device,
     42,
-    true,
+    1,
 );
 
 let labels = result.best_labels();

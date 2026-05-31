@@ -51,11 +51,13 @@ pub fn evoc_embedding<T>(
     params: &EvocEmbeddingParams<T>,
     initial_embedding: Option<&[Vec<T>]>,
     seed: u64,
-    verbose: bool,
+    verbose: usize,
 ) -> Vec<Vec<T>>
 where
     T: EvocFloat,
 {
+    let verbosity = parse_verbosity_level(verbose);
+
     let n = graph.len();
     if n == 0 {
         return Vec::new();
@@ -283,8 +285,9 @@ where
                 }
             });
 
-        if verbose && ((epoch + 1) % 10 == 0 || epoch + 1 == params.n_epochs) {
-            println!("  Embedding epoch {}/{}", epoch + 1, params.n_epochs);
+        if verbosity.detailed_verbosity() && ((epoch + 1) % 10 == 0 || epoch + 1 == params.n_epochs)
+        {
+            println!("   Embedding epoch {}/{}", epoch + 1, params.n_epochs);
         }
     }
 
@@ -315,7 +318,7 @@ mod test_embedding {
     fn test_empty_graph() {
         let graph: Vec<Vec<(usize, f64)>> = Vec::new();
         let params = EvocEmbeddingParams::default();
-        let result = evoc_embedding(&graph, 2, &params, None, 42, false);
+        let result = evoc_embedding(&graph, 2, &params, None, 42, 0);
         assert!(result.is_empty());
     }
 
@@ -323,7 +326,7 @@ mod test_embedding {
     fn test_single_node_no_edges() {
         let graph: Vec<Vec<(usize, f64)>> = vec![vec![]];
         let params = EvocEmbeddingParams::default();
-        let result = evoc_embedding(&graph, 2, &params, None, 42, false);
+        let result = evoc_embedding(&graph, 2, &params, None, 42, 0);
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].len(), 2);
     }
@@ -334,7 +337,7 @@ mod test_embedding {
         let params = EvocEmbeddingParams::default();
 
         for dim in [2, 4, 8, 16] {
-            let result = evoc_embedding(&graph, dim, &params, None, 42, false);
+            let result = evoc_embedding(&graph, dim, &params, None, 42, 0);
             assert_eq!(result.len(), 3);
             for row in &result {
                 assert_eq!(row.len(), dim);
@@ -347,8 +350,8 @@ mod test_embedding {
         let graph = triangle_graph::<f64>();
         let params = EvocEmbeddingParams::default();
 
-        let a = evoc_embedding(&graph, 4, &params, None, 123, false);
-        let b = evoc_embedding(&graph, 4, &params, None, 123, false);
+        let a = evoc_embedding(&graph, 4, &params, None, 123, 0);
+        let b = evoc_embedding(&graph, 4, &params, None, 123, 0);
 
         for (ra, rb) in a.iter().zip(b.iter()) {
             for (&va, &vb) in ra.iter().zip(rb.iter()) {
@@ -362,8 +365,8 @@ mod test_embedding {
         let graph = triangle_graph::<f64>();
         let params = EvocEmbeddingParams::default();
 
-        let a = evoc_embedding(&graph, 4, &params, None, 1, false);
-        let b = evoc_embedding(&graph, 4, &params, None, 2, false);
+        let a = evoc_embedding(&graph, 4, &params, None, 1, 0);
+        let b = evoc_embedding(&graph, 4, &params, None, 2, 0);
 
         let any_differ = a
             .iter()
@@ -381,7 +384,7 @@ mod test_embedding {
         };
 
         let init = vec![vec![1.0, 2.0], vec![3.0, 4.0]];
-        let result = evoc_embedding(&graph, 2, &params, Some(&init), 42, false);
+        let result = evoc_embedding(&graph, 2, &params, Some(&init), 42, 0);
 
         assert_eq!(result, init);
     }
@@ -398,7 +401,7 @@ mod test_embedding {
             ..Default::default()
         };
 
-        let result = evoc_embedding(&graph, 2, &params, Some(&init), 42, false);
+        let result = evoc_embedding(&graph, 2, &params, Some(&init), 42, 0);
 
         let initial_dsq = 100.0; // 10^2
         let final_dsq: f64 = result[0]
@@ -419,7 +422,7 @@ mod test_embedding {
     fn test_no_nans_or_infs() {
         let graph = triangle_graph::<f64>();
         let params = EvocEmbeddingParams::default();
-        let result = evoc_embedding(&graph, 8, &params, None, 42, false);
+        let result = evoc_embedding(&graph, 8, &params, None, 42, 0);
 
         for row in &result {
             for &v in row {
@@ -449,7 +452,7 @@ mod test_embedding {
             vec![(2, 1.0)],
         ];
         let params = EvocEmbeddingParams::default();
-        let result = evoc_embedding(&graph, 4, &params, None, 42, false);
+        let result = evoc_embedding(&graph, 4, &params, None, 42, 0);
 
         assert_eq!(result.len(), 4);
         for row in &result {
