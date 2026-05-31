@@ -1,5 +1,14 @@
 # News
 
+## 0.2.0
+
+**Features:**
+
+- Latest version bumps for packages (includes bug fixes on the GPU version on
+  high dimensional data).
+- Interface changed with verbose being a usize which gives more fine-grained
+  control over the verbosity.
+
 ## 0.1.6
 
 **Features:**

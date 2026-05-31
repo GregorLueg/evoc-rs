@@ -1,6 +1,6 @@
 [package]
 name = "evoc-rs"
-version = "0.1.6"
+version = "0.2.0"
 edition = "2024"
 authors = ["Gregor Lueg <gregorlueg@me.com>"]
 license = "MIT AND BSD-2-Clause"
@@ -15,11 +15,11 @@ path = "src/lib.rs"
 gpu = ["manifolds-rs/gpu", "ann-search-rs/gpu", "cubecl"]
 
 [dependencies]
-ann-search-rs = "0.4.0"
+ann-search-rs = "0.4.1"
 approx = "0.5.1"
 faer = "0.23.2"
 faer-traits = "0.23.2"
-manifolds-rs = { version = "0.3.0" }
+manifolds-rs = { version = "0.3.1" }
 num-traits = "0.2.19"
 rand = "0.10.0"
 rayon = "1.11.0"

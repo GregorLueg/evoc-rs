@@ -412,7 +412,7 @@ fn integration_07_embedding_preserves_clusters() {
         ..EvocEmbeddingParams::default()
     };
 
-    let embedding = evoc_embedding(&adj, 4, &params, None, 42, false);
+    let embedding = evoc_embedding(&adj, 4, &params, None, 42, 0);
 
     for row in &embedding {
         for &v in row {
@@ -486,8 +486,8 @@ fn integration_08b_embedding_reproducibility() {
         ..EvocEmbeddingParams::default()
     };
 
-    let a = evoc_embedding(&graph, 4, &params, None, 123, false);
-    let b = evoc_embedding(&graph, 4, &params, None, 123, false);
+    let a = evoc_embedding(&graph, 4, &params, None, 123, 0);
+    let b = evoc_embedding(&graph, 4, &params, None, 123, 0);
 
     for (ra, rb) in a.iter().zip(&b) {
         for (&va, &vb) in ra.iter().zip(rb) {

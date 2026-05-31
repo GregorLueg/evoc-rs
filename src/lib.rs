@@ -41,6 +41,7 @@ use crate::clustering::mst::build_mst;
 use crate::clustering::persistence::build_cluster_layers;
 use crate::graph::embedding::*;
 use crate::graph::fuzzy_graph::*;
+use crate::graph::label_prop::label_propagation_init;
 use crate::prelude::*;
 
 ////////////
@@ -186,7 +187,8 @@ impl<T: EvocFloat> EvocResult<T> {
 /// * `evoc_params` — clustering hyperparameters; see [`EvocParams`].
 /// * `nn_params` — hyperparameters forwarded to the ANN backend.
 /// * `seed` — random seed for reproducibility.
-/// * `verbose` — print progress and timing to stdout.
+/// * `verbose` - If `0` -> silent or `1` for normal verbosity, `2` for detailed
+///   verbosity.
 ///
 /// ### Returns
 ///
@@ -199,25 +201,27 @@ pub fn evoc<T>(
     evoc_params: &EvocParams<T>,
     nn_params: &NearestNeighbourParams<T>,
     seed: usize,
-    verbose: bool,
+    verbose: usize,
 ) -> Result<EvocResult<T>, EvocErrors>
 where
     T: EvocFloat + AnnSearchFloat,
     NNDescent<T>: ApplySortedUpdates<T> + NNDescentQuery<T>,
     HnswIndex<T>: HnswState<T>,
 {
+    let verbosity = parse_verbosity_level(verbose);
+
     let start_all = Instant::now();
 
     // 1. kNN graph
     let (knn_indices, knn_dist) = match precomputed_knn {
         Some((indices, distances)) => {
-            if verbose {
+            if verbosity.normal_verbosity() {
                 println!("Using precomputed kNN graph...");
             }
             (indices, distances)
         }
         None => {
-            if verbose {
+            if verbosity.normal_verbosity() {
                 println!(
                     "Running approximate nearest neighbour search using {}...",
                     ann_type
@@ -232,7 +236,7 @@ where
                 seed,
                 verbose,
             )?;
-            if verbose {
+            if verbosity.normal_verbosity() {
                 println!("kNN search done in {:.2?}.", start_knn.elapsed());
             }
             result
@@ -240,7 +244,7 @@ where
     };
 
     // 2. Fuzzy simplicial set
-    if verbose {
+    if verbosity.normal_verbosity() {
         println!("Constructing fuzzy simplicial set...");
     }
     let start_graph = Instant::now();
@@ -248,9 +252,9 @@ where
     let graph =
         build_fuzzy_simplicial_set(&knn_indices, &knn_dist, effective_k, evoc_params.symmetrise);
     let adj = coo_to_adjacency_list(&graph);
-    if verbose {
+    if verbosity.normal_verbosity() {
         println!(
-            "Fuzzy simplicial set done in {:.2?}.",
+            "... fuzzy simplicial set done in {:.2?}.",
             start_graph.elapsed()
         );
     }
@@ -269,22 +273,17 @@ where
         .map(|i| (0..d).map(|j| data[(i, j)]).collect())
         .collect();
 
-    if verbose {
+    if verbosity.normal_verbosity() {
         println!("Computing label propagation initialisation...");
     }
-    let initial_embedding = crate::graph::label_prop::label_propagation_init(
-        &graph,
-        dim,
-        Some(&data_vecs),
-        seed as u64,
-        verbose,
-    );
-    if verbose {
+    let initial_embedding =
+        label_propagation_init(&graph, dim, Some(&data_vecs), seed as u64, verbose);
+    if verbosity.normal_verbosity() {
         println!("Label prop init done in {:.2?}.", start_init.elapsed());
     }
 
     // 5. Node embedding
-    if verbose {
+    if verbosity.normal_verbosity() {
         println!(
             "Computing {}-d node embedding ({} epochs)...",
             dim, evoc_params.n_epochs
@@ -306,12 +305,12 @@ where
         seed as u64,
         verbose,
     );
-    if verbose {
-        println!("Embedding done in {:.2?}.", start_embed.elapsed());
+    if verbosity.normal_verbosity() {
+        println!(" ... embedding done in {:.2?}.", start_embed.elapsed());
     }
 
     // 6. Clustering
-    if verbose {
+    if verbosity.normal_verbosity() {
         println!("Running density-based clustering...");
     }
     let start_cluster = Instant::now();
@@ -331,7 +330,7 @@ where
             )
         };
 
-    if verbose {
+    if verbosity.normal_verbosity() {
         let n_layers = cluster_layers.len();
         println!(
             "Clustering done in {:.2?}: {} layer(s).",
@@ -466,7 +465,8 @@ where
 /// * `nn_params` — GPU nearest-neighbour search parameters.
 /// * `device` — GPU device.
 /// * `seed` — random seed for reproducibility.
-/// * `verbose` — print progress and timing to stdout.
+/// * `verbose` - If `0` -> silent or `1` for normal verbosity, `2` for detailed
+///   verbosity.
 ///
 /// ### Returns
 ///
@@ -482,7 +482,7 @@ pub fn evoc_gpu<T, R>(
     nn_params: &NearestNeighbourParamsGpu<T>,
     device: R::Device,
     seed: usize,
-    verbose: bool,
+    verbose: usize,
 ) -> Result<EvocResult<T>, EvocErrors>
 where
     T: EvocFloat + AnnSearchFloat + AnnSearchGpuFloat,
@@ -490,17 +490,18 @@ where
     NNDescentGpu<T, R>: NNDescentQuery<T>,
 {
     let start_all = Instant::now();
+    let verbosity = parse_verbosity_level(verbose);
 
     // 1. kNN graph (GPU)
     let (knn_indices, knn_dist) = match precomputed_knn {
         Some((indices, distances)) => {
-            if verbose {
+            if verbosity.normal_verbosity() {
                 println!("Using precomputed kNN graph...");
             }
             (indices, distances)
         }
         None => {
-            if verbose {
+            if verbosity.normal_verbosity() {
                 println!("Running GPU nearest neighbour search using {}...", ann_type);
             }
             let start_knn = Instant::now();
@@ -513,7 +514,7 @@ where
                 seed,
                 verbose,
             )?;
-            if verbose {
+            if verbosity.normal_verbosity() {
                 println!("GPU kNN search done in {:.2?}.", start_knn.elapsed());
             }
             result
@@ -521,7 +522,7 @@ where
     };
 
     // 2. Fuzzy simplicial set
-    if verbose {
+    if verbosity.normal_verbosity() {
         println!("Constructing fuzzy simplicial set...");
     }
     let start_graph = Instant::now();
@@ -529,9 +530,9 @@ where
     let graph =
         build_fuzzy_simplicial_set(&knn_indices, &knn_dist, effective_k, evoc_params.symmetrise);
     let adj = coo_to_adjacency_list(&graph);
-    if verbose {
+    if verbosity.normal_verbosity() {
         println!(
-            "Fuzzy simplicial set done in {:.2?}.",
+            "... fuzzy simplicial set done in {:.2?}.",
             start_graph.elapsed()
         );
     }
@@ -549,7 +550,7 @@ where
         .map(|i| (0..d).map(|j| data[(i, j)]).collect())
         .collect();
 
-    if verbose {
+    if verbosity.normal_verbosity() {
         println!("Computing label propagation initialisation...");
     }
     let initial_embedding = crate::graph::label_prop::label_propagation_init(
@@ -559,12 +560,12 @@ where
         seed as u64,
         verbose,
     );
-    if verbose {
-        println!("Label prop init done in {:.2?}.", start_init.elapsed());
+    if verbosity.normal_verbosity() {
+        println!(" ... label prop init done in {:.2?}.", start_init.elapsed());
     }
 
     // 5. Node embedding
-    if verbose {
+    if verbosity.normal_verbosity() {
         println!(
             "Computing {}-d node embedding ({} epochs)...",
             dim, evoc_params.n_epochs
@@ -586,12 +587,12 @@ where
         seed as u64,
         verbose,
     );
-    if verbose {
-        println!("Embedding done in {:.2?}.", start_embed.elapsed());
+    if verbosity.normal_verbosity() {
+        println!(" ... embedding done in {:.2?}.", start_embed.elapsed());
     }
 
     // 6. Clustering
-    if verbose {
+    if verbosity.normal_verbosity() {
         println!("Running density-based clustering...");
     }
     let start_cluster = Instant::now();
@@ -611,7 +612,7 @@ where
             )
         };
 
-    if verbose {
+    if verbosity.normal_verbosity() {
         let n_layers = cluster_layers.len();
         println!(
             "Clustering done in {:.2?}: {} layer(s).",
