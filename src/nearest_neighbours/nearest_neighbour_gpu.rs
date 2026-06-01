@@ -33,7 +33,7 @@ pub enum AnnSearchGpu {
 
 /// Parameters for the nearest neighbour search
 #[derive(Debug, Clone)]
-pub struct NearestNeighbourParamsGpu<T> {
+pub struct NearestNeighbourParamsGpuEvoc<T> {
     /// Distance metric, one of `"euclidean"` or `"cosine"`
     pub dist_metric: String,
     /// IVF-GPU: Number of lists, clusters to use. If not provided, will default
@@ -66,7 +66,7 @@ pub struct NearestNeighbourParamsGpu<T> {
     pub n_entry_points: Option<usize>,
 }
 
-impl<T> NearestNeighbourParamsGpu<T> {
+impl<T> NearestNeighbourParamsGpuEvoc<T> {
     /// Generate a new instance
     ///
     /// ### Params
@@ -125,7 +125,7 @@ impl<T> NearestNeighbourParamsGpu<T> {
     }
 }
 
-impl<T> Default for NearestNeighbourParamsGpu<T>
+impl<T> Default for NearestNeighbourParamsGpuEvoc<T>
 where
     T: AnnSearchFloat,
 {
@@ -202,7 +202,7 @@ pub fn run_ann_search_gpu<T, R>(
     data: MatRef<T>,
     k: usize,
     ann_type: String,
-    params_nn: &NearestNeighbourParamsGpu<T>,
+    params_nn: &NearestNeighbourParamsGpuEvoc<T>,
     device: R::Device,
     seed: usize,
     verbose: usize,

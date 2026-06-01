@@ -7,8 +7,8 @@ use commons::*;
 use cubecl::wgpu::{WgpuDevice, WgpuRuntime};
 use faer::Mat;
 
-use evoc_rs::nearest_neighbours::nearest_neighbour_cpu::*;
-use evoc_rs::nearest_neighbours::nearest_neighbour_gpu::*;
+use evoc_rs::nearest_neighbours::nearest_neighbour_gpu::run_ann_search_gpu;
+use evoc_rs::prelude::*;
 use evoc_rs::{EvocParams, evoc_gpu};
 
 /// Convert `Vec<Vec<f32>>` from make_blobs into a faer matrix.
@@ -25,7 +25,7 @@ fn gpu_integration_01_two_clusters_exhaustive() {
     let mat = to_mat(&data);
 
     let params = EvocParams::<f32>::default();
-    let nn_params = NearestNeighbourParamsGpu::<f32>::default();
+    let nn_params = NearestNeighbourParamsGpuEvoc::<f32>::default();
     let device = WgpuDevice::default();
 
     let result = evoc_gpu::<f32, WgpuRuntime>(
@@ -75,10 +75,10 @@ fn gpu_integration_02_two_clusters_ivf() {
     let mat = to_mat(&data);
 
     let params = EvocParams::<f32>::default();
-    let nn_params = NearestNeighbourParamsGpu::<f32> {
+    let nn_params = NearestNeighbourParamsGpuEvoc::<f32> {
         n_list: Some(5),
         n_probes: Some(5),
-        ..NearestNeighbourParamsGpu::default()
+        ..NearestNeighbourParamsGpuEvoc::default()
     };
 
     let device = WgpuDevice::default();
@@ -108,7 +108,7 @@ fn gpu_integration_03_all_backends_dispatch() {
     let mat = to_mat(&data);
 
     let params = EvocParams::<f32>::default();
-    let nn_params = NearestNeighbourParamsGpu::<f32>::default();
+    let nn_params = NearestNeighbourParamsGpuEvoc::<f32>::default();
 
     for ann_type in ["exhaustive_gpu", "ivf_gpu", "nndescent_gpu"] {
         let device = WgpuDevice::default();
@@ -145,7 +145,7 @@ fn gpu_integration_04_structural_agreement_with_cpu() {
 
     let params = EvocParams::<f32>::default();
 
-    let nn_cpu = NearestNeighbourParams::<f32>::default();
+    let nn_cpu = NearestNeighbourParamsEvoc::<f32>::default();
     let cpu = evoc::<f32>(
         mat.as_ref(),
         "kmknn".to_string(),
@@ -157,7 +157,7 @@ fn gpu_integration_04_structural_agreement_with_cpu() {
     )
     .unwrap();
 
-    let nn_gpu = NearestNeighbourParamsGpu::<f32>::default();
+    let nn_gpu = NearestNeighbourParamsGpuEvoc::<f32>::default();
     let device = WgpuDevice::default();
     let gpu = evoc_gpu::<f32, WgpuRuntime>(
         mat.as_ref(),
@@ -195,7 +195,7 @@ fn gpu_integration_05_precomputed_knn() {
     let mat = to_mat(&data);
     let k = 15;
 
-    let nn_params = NearestNeighbourParamsGpu::<f32>::default();
+    let nn_params = NearestNeighbourParamsGpuEvoc::<f32>::default();
     let device = WgpuDevice::default();
     let (knn_indices, knn_dist) = run_ann_search_gpu::<f32, WgpuRuntime>(
         mat.as_ref(),
@@ -242,7 +242,7 @@ fn gpu_integration_06_approx_n_clusters() {
         base_min_cluster_size: 3,
         ..EvocParams::default()
     };
-    let nn_params = NearestNeighbourParamsGpu::<f32>::default();
+    let nn_params = NearestNeighbourParamsGpuEvoc::<f32>::default();
     let device = WgpuDevice::default();
 
     let result = evoc_gpu::<f32, WgpuRuntime>(
@@ -275,7 +275,7 @@ fn gpu_integration_07_knn_no_self() {
     let mat = to_mat(&data);
 
     let params = EvocParams::<f32>::default();
-    let nn_params = NearestNeighbourParamsGpu::<f32>::default();
+    let nn_params = NearestNeighbourParamsGpuEvoc::<f32>::default();
     let device = WgpuDevice::default();
 
     let result = evoc_gpu::<f32, WgpuRuntime>(

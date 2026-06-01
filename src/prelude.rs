@@ -7,8 +7,12 @@
 
 pub use crate::errors::EvocErrors;
 pub use crate::graph::EvocEmbeddingParams;
+pub use crate::nearest_neighbours::nearest_neighbour_cpu::NearestNeighbourParamsEvoc;
 pub use crate::utils::sparse::CoordinateList;
 pub use crate::utils::traits::EvocFloat;
+
+#[cfg(feature = "gpu")]
+pub use crate::nearest_neighbours::nearest_neighbour_gpu::NearestNeighbourParamsGpuEvoc;
 
 ///////////
 // Enums //

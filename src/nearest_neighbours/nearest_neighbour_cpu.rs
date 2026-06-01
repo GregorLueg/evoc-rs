@@ -39,7 +39,7 @@ pub enum AnnSearch {
 
 /// Parameters for the nearest neighbour search
 #[derive(Debug, Clone)]
-pub struct NearestNeighbourParams<T> {
+pub struct NearestNeighbourParamsEvoc<T> {
     /// Distance metric, one of `"euclidean"` or `"cosine"`
     pub dist_metric: String,
     /// Annoy: Number of trees to use to build the index. Defaults to `50` like
@@ -71,7 +71,7 @@ pub struct NearestNeighbourParams<T> {
     pub n_probes: Option<usize>,
 }
 
-impl<T> NearestNeighbourParams<T> {
+impl<T> NearestNeighbourParamsEvoc<T> {
     /// Generate a new instance
     ///
     /// ### Params
@@ -147,7 +147,7 @@ impl<T> NearestNeighbourParams<T> {
     }
 }
 
-impl<T> Default for NearestNeighbourParams<T>
+impl<T> Default for NearestNeighbourParamsEvoc<T>
 where
     T: Float,
 {
@@ -225,7 +225,7 @@ pub fn run_ann_search<T>(
     data: MatRef<T>,
     k: usize,
     ann_type: String,
-    params_nn: &NearestNeighbourParams<T>,
+    params_nn: &NearestNeighbourParamsEvoc<T>,
     seed: usize,
     verbose: usize,
 ) -> EvocKnnResults<T>
