@@ -7,8 +7,9 @@ use commons::*;
 use cubecl::wgpu::{WgpuDevice, WgpuRuntime};
 use faer::Mat;
 
+use evoc_rs::nearest_neighbours::nearest_neighbour_cpu::*;
+use evoc_rs::nearest_neighbours::nearest_neighbour_gpu::*;
 use evoc_rs::{EvocParams, evoc_gpu};
-use manifolds_rs::data::nearest_neighbours_gpu::NearestNeighbourParamsGpu;
 
 /// Convert `Vec<Vec<f32>>` from make_blobs into a faer matrix.
 fn to_mat(data: &[Vec<f64>]) -> Mat<f32> {
@@ -138,7 +139,6 @@ fn gpu_integration_03_all_backends_dispatch() {
 #[test]
 fn gpu_integration_04_structural_agreement_with_cpu() {
     use evoc_rs::evoc;
-    use manifolds_rs::data::nearest_neighbours::NearestNeighbourParams;
 
     let (data, gt) = make_blobs(100, 3, 8, 20.0, 5.0, 42);
     let mat = to_mat(&data);
@@ -191,8 +191,6 @@ fn gpu_integration_04_structural_agreement_with_cpu() {
 /// Precomputed kNN path should produce a valid clustering.
 #[test]
 fn gpu_integration_05_precomputed_knn() {
-    use manifolds_rs::data::nearest_neighbours_gpu::run_ann_search_gpu;
-
     let (data, gt) = make_blobs(100, 2, 8, 20.0, 5.0, 42);
     let mat = to_mat(&data);
     let k = 15;

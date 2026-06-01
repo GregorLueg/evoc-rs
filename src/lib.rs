@@ -15,6 +15,7 @@
 pub mod clustering;
 pub mod errors;
 pub mod graph;
+pub mod nearest_neighbours;
 pub mod prelude;
 pub mod utils;
 
@@ -22,8 +23,6 @@ use ann_search_rs::cpu::hnsw::{HnswIndex, HnswState};
 use ann_search_rs::cpu::nndescent::{ApplySortedUpdates, NNDescent, NNDescentQuery};
 use ann_search_rs::prelude::AnnSearchFloat;
 use faer::MatRef;
-use manifolds_rs::PreComputedKnn;
-use manifolds_rs::data::nearest_neighbours::*;
 use std::time::Instant;
 
 #[cfg(feature = "gpu")]
@@ -32,8 +31,6 @@ use ann_search_rs::gpu::nndescent_gpu::NNDescentGpu;
 use ann_search_rs::gpu::traits_gpu::AnnSearchGpuFloat;
 #[cfg(feature = "gpu")]
 use cubecl::prelude::*;
-#[cfg(feature = "gpu")]
-use manifolds_rs::data::nearest_neighbours_gpu::*;
 
 use crate::clustering::condensed_tree::*;
 use crate::clustering::linkage::mst_to_linkage_tree;
@@ -42,7 +39,11 @@ use crate::clustering::persistence::build_cluster_layers;
 use crate::graph::embedding::*;
 use crate::graph::fuzzy_graph::*;
 use crate::graph::label_prop::label_propagation_init;
+use crate::nearest_neighbours::nearest_neighbour_cpu::*;
 use crate::prelude::*;
+
+#[cfg(feature = "gpu")]
+use crate::nearest_neighbours::nearest_neighbour_gpu::*;
 
 ////////////
 // Params //
