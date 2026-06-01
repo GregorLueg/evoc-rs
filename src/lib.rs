@@ -186,7 +186,8 @@ impl<T: EvocFloat> EvocResult<T> {
 /// * `precomputed_knn` — pre-built `(indices, distances)` pair; pass `None`
 ///   to build the graph from `data`.
 /// * `evoc_params` — clustering hyperparameters; see [`EvocParams`].
-/// * `nn_params` — hyperparameters forwarded to the ANN backend.
+/// * `nn_params` — hyperparameters forwarded to the ANN backend, see
+///   [`NearestNeighbourParamsEvoc`]
 /// * `seed` — random seed for reproducibility.
 /// * `verbose` - If `0` -> silent or `1` for normal verbosity, `2` for detailed
 ///   verbosity.
@@ -200,7 +201,7 @@ pub fn evoc<T>(
     ann_type: String,
     precomputed_knn: PreComputedKnn<T>,
     evoc_params: &EvocParams<T>,
-    nn_params: &NearestNeighbourParams<T>,
+    nn_params: &NearestNeighbourParamsEvoc<T>,
     seed: usize,
     verbose: usize,
 ) -> Result<EvocResult<T>, EvocErrors>
@@ -463,7 +464,8 @@ where
 /// * `precomputed_knn` — pre-built `(indices, distances)` pair; pass `None`
 ///   to build the graph on the GPU.
 /// * `evoc_params` — clustering hyperparameters; see [`EvocParams`].
-/// * `nn_params` — GPU nearest-neighbour search parameters.
+/// * `nn_params` — GPU nearest-neighbour search parameters, see
+///   [`NearestNeighbourParamsGpuEvoc`].
 /// * `device` — GPU device.
 /// * `seed` — random seed for reproducibility.
 /// * `verbose` - If `0` -> silent or `1` for normal verbosity, `2` for detailed
@@ -480,7 +482,7 @@ pub fn evoc_gpu<T, R>(
     ann_type: String,
     precomputed_knn: PreComputedKnn<T>,
     evoc_params: &EvocParams<T>,
-    nn_params: &NearestNeighbourParamsGpu<T>,
+    nn_params: &NearestNeighbourParamsGpuEvoc<T>,
     device: R::Device,
     seed: usize,
     verbose: usize,
