@@ -56,11 +56,11 @@ Here is how you would use it.
 
 ```rust
 use evoc_rs::{evoc, EvocParams};
-use manifolds_rs::data::nearest_neighbours::NearestNeighbourParams;
+use evoc_rs::prelude::*;
 
 // data is a faer MatRef<f32> with shape (n_points, n_features)
 let params = EvocParams::default();
-let nn_params = NearestNeighbourParams::default();
+let nn_params = NearestNeighbourParamsEvoc::default();
 let result = evoc(
     data.as_ref(),
     "nndescent".to_string(),
@@ -99,12 +99,12 @@ persistence analysis remain on the CPU.
 
 ```rust
 use evoc_rs::{evoc_gpu, EvocParams};
-use manifolds_rs::data::nearest_neighbours_gpu::NearestNeighbourParamsGpu;
+use evoc_rs::prelude::*;
 use cubecl::wgpu::{WgpuDevice, WgpuRuntime};
 
 // data is a faer MatRef<f32> (f32 only — see note below)
 let params = EvocParams::<f32>::default();
-let nn_params = NearestNeighbourParamsGpu::<f32>::default();
+let nn_params = NearestNeighbourParamsGpuEvoc::<f32>::default();
 let device = WgpuDevice::default();
 
 let result = evoc_gpu::<f32, WgpuRuntime>(
