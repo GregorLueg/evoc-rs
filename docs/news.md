@@ -1,5 +1,12 @@
 # News
 
+## 0.2.1
+
+**Features:**
+
+- Removed the coupling with `manifolds-rs` and sole dependency on
+  `ann-search-rs`.
+
 ## 0.2.0
 
 **Features:**
