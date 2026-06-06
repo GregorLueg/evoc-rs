@@ -1,5 +1,12 @@
 # News
 
+## 0.2.2
+
+**Fix:**
+
+- Version update on `ann-search-rs` to avoid a nasty wgpu <> metal bug that
+  affects the CAGRA-style ANN.
+
 ## 0.2.1
 
 **Features:**

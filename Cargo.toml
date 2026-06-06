@@ -1,6 +1,6 @@
 [package]
 name = "evoc-rs"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2024"
 authors = ["Gregor Lueg <gregorlueg@me.com>"]
 license = "MIT AND BSD-2-Clause"
@@ -15,7 +15,7 @@ path = "src/lib.rs"
 gpu = ["ann-search-rs/gpu", "cubecl"]
 
 [dependencies]
-ann-search-rs = "0.4.1"
+ann-search-rs = "0.4.3"
 approx = "0.5.1"
 faer = "0.23.2"
 faer-traits = "0.23.2"
