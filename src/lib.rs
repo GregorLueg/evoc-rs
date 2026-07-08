@@ -504,6 +504,25 @@ where
             (indices, distances)
         }
         None => {
+            // For the nndescent_gpu path, the CAGRA graph degree (`params.k`)
+            // and NNDescent build degree (`params.k_build`) are independent
+            // of the query k. Left at their crate defaults (30 and ~45) they
+            // sit below `n_neighbours` whenever `n_neighbours > 30`, so the
+            // beam search walks a graph too small to serve the query well.
+            // Backfill from `n_neighbours` here when the user hasn't set them.
+            let k = evoc_params.n_neighbours;
+            let scaled_params: NearestNeighbourParamsGpuEvoc<T>;
+            let nn_params = if nn_params.k.is_none() || nn_params.k_build.is_none() {
+                scaled_params = NearestNeighbourParamsGpuEvoc {
+                    k: nn_params.k.or(Some(k)),
+                    k_build: nn_params.k_build.or(Some(2 * k)),
+                    ..nn_params.clone()
+                };
+                &scaled_params
+            } else {
+                nn_params
+            };
+
             if verbosity.normal_verbosity() {
                 println!("Running GPU nearest neighbour search using {}...", ann_type);
             }

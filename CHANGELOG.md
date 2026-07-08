@@ -1,5 +1,16 @@
 # News
 
+## 0.2.3
+
+**Features:**
+
+- `CLAUDE.md` added.
+
+**Fix:**
+
+- Propagation of parameters to the GPU-accelerated NNDescent were not behaving.
+  Fixed now.
+
 ## 0.2.2
 
 **Fix:**
