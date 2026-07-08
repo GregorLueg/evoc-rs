@@ -43,10 +43,14 @@ pub struct NearestNeighbourParamsGpuEvoc<T> {
     /// to `sqrt(n_list)` lists.
     pub n_probes: Option<usize>,
     /// NNDescent-GPU: Final node degree of the CAGRA graph after pruning. If
-    /// `None`, defaults to 30.
+    /// `None`, the ann-search-rs crate defaults to 30. When called via
+    /// `evoc_gpu` a `None` value is backfilled to `evoc_params.n_neighbours`
+    /// so the CAGRA graph is sized for the query.
     pub k: Option<usize>,
     /// NNDescent-GPU: Build node degree. Initial node degree prior to pruning.
-    /// If `None`, defaults to `k * 1.5`.
+    /// If `None`, the ann-search-rs crate defaults to `max(k, floor(1.5 * k))`.
+    /// When called via `evoc_gpu` a `None` value is backfilled to
+    /// `2 * evoc_params.n_neighbours`.
     pub k_build: Option<usize>,
     /// NNDescent-GPU: Number of trees for the initialisation of the kNN graph
     /// prior to NNDescent.
@@ -83,8 +87,12 @@ impl<T> NearestNeighbourParamsGpuEvoc<T> {
     ///
     /// **NNDescent-GPU**
     ///
-    /// * `k` - Final node degree after CAGRA pruning. Defaults to `30`.
-    /// * `k_build` - Initial node degree before pruning. Defaults to `k * 1.5`.
+    /// * `k` - Final node degree after CAGRA pruning. Defaults to `30` in
+    ///   ann-search-rs; backfilled to `evoc_params.n_neighbours` when called
+    ///   via `evoc_gpu`.
+    /// * `k_build` - Initial node degree before pruning. Defaults to
+    ///   `max(k, floor(1.5 * k))` in ann-search-rs; backfilled to
+    ///   `2 * evoc_params.n_neighbours` when called via `evoc_gpu`.
     /// * `n_tree` - Number of Annoy trees for kNN graph initialisation.
     /// * `delta` - Convergence threshold for NNDescent iterations.
     /// * `rho` - Sampling rate for NNDescent iterations.
@@ -262,9 +270,16 @@ where
                 device,
             )?;
 
+            // Mirror CagraGpuSearchParams::from_graph so beam_width/iters scale
+            // with the requested k_out and the CAGRA graph degree. Passing
+            // None here does not defer to the crate's from_graph fallback -
+            // the raw BEAM_WIDTH=16 default caps returned neighbours at 15
+            // after self-filtering.
+            let k_graph = params_nn.k.unwrap_or(30);
+            let scaled_bw = (k + 1).max(k_graph).max(16) * 2;
             let query_params = CagraGpuSearchParams::new(
-                params_nn.beam_width,
-                params_nn.max_beam_iters,
+                params_nn.beam_width.or(Some(scaled_bw)),
+                params_nn.max_beam_iters.or(Some(scaled_bw * 3)),
                 params_nn.n_entry_points,
                 None,
             );
