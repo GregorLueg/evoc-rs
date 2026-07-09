@@ -1,5 +1,12 @@
 # News
 
+## 0.2.4
+
+**Fix:**
+
+- Version bump to latest `ann-search-rs` that will ensure that the IVF indices
+  do return the expected k neighbours and will query more lists.
+
 ## 0.2.3
 
 **Features:**
