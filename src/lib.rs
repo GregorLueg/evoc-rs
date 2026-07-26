@@ -20,13 +20,12 @@ pub mod prelude;
 pub mod utils;
 
 use ann_search_rs::cpu::hnsw::{HnswIndex, HnswState};
-use ann_search_rs::cpu::nndescent::{ApplySortedUpdates, NNDescent, NNDescentQuery};
+use ann_search_rs::cpu::nndescent::{NNDescent, NNDescentQuery};
 use ann_search_rs::prelude::AnnSearchFloat;
+use ann_search_rs::utils::nndescent_utils::ApplySortedUpdates;
 use faer::MatRef;
 use std::time::Instant;
 
-#[cfg(feature = "gpu")]
-use ann_search_rs::gpu::nndescent_gpu::NNDescentGpu;
 #[cfg(feature = "gpu")]
 use ann_search_rs::gpu::traits_gpu::AnnSearchGpuFloat;
 #[cfg(feature = "gpu")]
@@ -490,7 +489,6 @@ pub fn evoc_gpu<T, R>(
 where
     T: EvocFloat + AnnSearchFloat + AnnSearchGpuFloat,
     R: Runtime,
-    NNDescentGpu<T, R>: NNDescentQuery<T>,
 {
     let start_all = Instant::now();
     let verbosity = parse_verbosity_level(verbose);
