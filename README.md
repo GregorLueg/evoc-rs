@@ -41,14 +41,14 @@ Just add the dependency to your `cargo.toml` file:
 
 ```toml
 [dependencies]
-evoc-rs = "0.2.1"
+evoc-rs = "*"
 ```
 
 To enable GPU-accelerated kNN search:
 
 ```toml
 [dependencies]
-evoc-rs = { version = "0.2.1", features = ["gpu"] }
+evoc-rs = { version = "*", features = ["gpu"] }
 ```
 
 ## Usage
