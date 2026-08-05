@@ -7,6 +7,7 @@ use ann_search_rs::{
     query_exhaustive_index_gpu_self, query_ivf_index_gpu_self, query_nndescent_index_gpu_self,
 };
 use cubecl::prelude::*;
+use cubecl_utils_rs::CubeclFloat;
 use faer::MatRef;
 use rayon::prelude::*;
 
@@ -214,7 +215,7 @@ pub fn run_ann_search_gpu<T, R>(
     verbose: usize,
 ) -> EvocKnnResults<T>
 where
-    T: AnnSearchFloat + AnnSearchGpuFloat,
+    T: AnnSearchFloat + CubeclFloat,
     R: Runtime,
 {
     let verbosity = parse_verbosity_level(verbose);
