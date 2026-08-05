@@ -27,7 +27,8 @@ use faer::MatRef;
 use std::time::Instant;
 
 #[cfg(feature = "gpu")]
-use ann_search_rs::gpu::traits_gpu::AnnSearchGpuFloat;
+use cubecl_utils_rs::CubeclFloat;
+
 #[cfg(feature = "gpu")]
 use cubecl::prelude::*;
 
@@ -487,7 +488,7 @@ pub fn evoc_gpu<T, R>(
     verbose: usize,
 ) -> Result<EvocResult<T>, EvocErrors>
 where
-    T: EvocFloat + AnnSearchFloat + AnnSearchGpuFloat,
+    T: EvocFloat + AnnSearchFloat + CubeclFloat,
     R: Runtime,
 {
     let start_all = Instant::now();
