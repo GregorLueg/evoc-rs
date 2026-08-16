@@ -6,6 +6,8 @@ authors = ["Gregor Lueg <gregorlueg@me.com>"]
 license = "MIT AND BSD-2-Clause"
 repository = "https://github.com/GregorLueg/evoc-rs"
 description = "Rust port of the EVoC clustering algorithm for high dimensional data"
+keywords = ["clustering", "embedding", "knn", "umap", "hdbscan"]
+categories = ["algorithms", "science", "mathematics"]
 
 [lib]
 name = "evoc_rs"
