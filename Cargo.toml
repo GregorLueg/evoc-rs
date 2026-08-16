@@ -1,11 +1,13 @@
 [package]
 name = "evoc-rs"
-version = "0.2.6"
+version = "0.2.7"
 edition = "2024"
 authors = ["Gregor Lueg <gregorlueg@me.com>"]
 license = "MIT AND BSD-2-Clause"
 repository = "https://github.com/GregorLueg/evoc-rs"
 description = "Rust port of the EVoC clustering algorithm for high dimensional data"
+keywords = ["clustering", "embedding", "knn", "umap", "hdbscan"]
+categories = ["algorithms", "science", "mathematics"]
 
 [lib]
 name = "evoc_rs"
@@ -15,7 +17,7 @@ path = "src/lib.rs"
 gpu = ["ann-search-rs/gpu", "cubecl", "cubecl-utils-rs"]
 
 [dependencies]
-ann-search-rs = "0.5.0"
+ann-search-rs = "0.5.2"
 approx = "0.5.1"
 faer = "0.23.2"
 faer-traits = "0.23.2"

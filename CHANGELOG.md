@@ -1,5 +1,11 @@
 # News
 
+## 0.2.7
+
+**Feature:**
+
+- Version update on `ann-search-rs` to profit from faster GPU code.
+
 ## 0.2.6
 
 **Feature:**
