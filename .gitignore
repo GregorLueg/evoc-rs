@@ -3,3 +3,5 @@
 
 # Apple
 .DS_Store
+
+.claude/worktrees/*
