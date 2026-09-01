@@ -50,7 +50,7 @@ Anything else is promoted to float64, never narrowed. If memory is tight, hand
 it float32 yourself.
 
 ```python
-model.membership_strengths_.dtype   # float32 in, float32 out
+model.membership_strengths_.dtype  # float32 in, float32 out
 ```
 
 ## Bring your own graph
@@ -69,8 +69,8 @@ refit as often as you like.
 ## Threads
 
 ```python
-evoc_rs.set_num_threads(8)   # cap it
-evoc_rs.set_num_threads(0)   # back to one per core
+evoc_rs.set_num_threads(8)  # cap it
+evoc_rs.set_num_threads(0)  # back to one per core
 evoc_rs.num_threads()
 ```
 

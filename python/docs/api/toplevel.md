@@ -31,5 +31,6 @@ what the numerics are.
 
 ```python
 import evoc_rs
+
 evoc_rs.__version__, evoc_rs.__core_version__
 ```

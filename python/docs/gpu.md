@@ -65,7 +65,7 @@ library that narrows on your behalf.
 
 ```python
 model = evoc_rs.EVoCGpu().fit(X.astype(np.float64))
-model.membership_strengths_.dtype   # float32
+model.membership_strengths_.dtype  # float32
 ```
 
 ## CPU-only wheels
