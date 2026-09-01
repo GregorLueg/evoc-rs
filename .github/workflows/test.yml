@@ -15,5 +15,8 @@ jobs:
     uses: GregorLueg/personal-actions/.github/workflows/rust-test.yml@v1
     with:
       cpu-args: '--release --no-default-features'
+      # The default lane has no ndarray, so the input conversions behind that
+      # feature would never be compiled on a runner without a GPU.
+      cpu-args-extra: '--release --features ndarray'
       gpu-args: '--release --all-features -- --no-capture'
     secrets: inherit

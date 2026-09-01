@@ -55,6 +55,7 @@ pub fn count_clusters(labels: &[i64]) -> usize {
 ///
 /// Uses a simple majority-vote alignment: for each predicted cluster, find
 /// the most common ground-truth label and count agreements.
+#[allow(dead_code)] // used by integration_tests only
 pub fn cluster_accuracy(predicted: &[i64], ground_truth: &[usize]) -> f64 {
     use std::collections::HashMap;
 

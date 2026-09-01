@@ -14,10 +14,20 @@ name = "evoc_rs"
 path = "src/lib.rs"
 
 [features]
+## Enable GPU-accelerated approximate nearest neighbour search for the kNN stage
 gpu = ["ann-search-rs/gpu", "cubecl", "cubecl-utils-rs"]
+## Accept `ndarray` 2-D arrays wherever a faer matrix is accepted.
+##
+## This makes `ndarray` a public dependency, so a downstream crate pinned to a
+## different major version ends up with two incompatible `ArrayView2` types in
+## the graph. If that bites, leave the feature off and pass
+## `(arr.as_slice().unwrap(), arr.nrows(), arr.ncols())` instead, which works on
+## any `ndarray` version.
+ndarray = ["dep:ndarray"]
 
 [dependencies]
-ann-search-rs = "0.5.2"
+ann-search-rs = "0.8.0"
+ndarray = { version = ">=0.16, <0.18", optional = true }
 approx = "0.5.1"
 faer = "0.23.2"
 faer-traits = "0.23.2"
