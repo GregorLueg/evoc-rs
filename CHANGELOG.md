@@ -1,5 +1,32 @@
 # News
 
+## 0.3.0
+
+**Python**
+
+- Python bindings under `python/`, built with PyO3 and maturin. A
+  scikit-learn shaped `EVoC` estimator over the CPU pipeline, plus `EVoCGpu`
+  for the GPU kNN path. Documentation at
+  <https://gregorlueg.github.io/evoc-rs/>.
+
+**Features**
+
+- More inputs accepted: `evoc` and `evoc_gpu` take a faer matrix, an ndarray
+  2-D array (behind the new `ndarray` feature) or a row-major
+  `(&[T], n_samples, n_features)` tuple, via the new `EvocMatrix` trait. Every
+  layout bar a non-contiguous ndarray is zero-copy, and the pipeline below the
+  entry points stays on `MatRef`.
+- `evoc_rs::VERSION`, so a dependent can report which version of the numerics
+  it was built against.
+- Version update on `ann-search-rs` to 0.8.0, for substantially faster
+  approximate nearest neighbour searches.
+
+**Breaking changes**
+
+- `evoc` and `evoc_gpu` take `impl EvocMatrix<T>` rather than `MatRef<T>`.
+  Existing call sites passing a `MatRef` are unaffected, since `MatRef`
+  implements the trait.
+
 ## 0.2.7
 
 **Feature:**

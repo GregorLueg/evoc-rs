@@ -1,0 +1,62 @@
+[build-system]
+requires = ["maturin>=1.15,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "evoc-rs"
+description = "EVoC clustering for high-dimensional embeddings, in Rust."
+readme = "README.md"
+license = { text = "MIT AND BSD-2-Clause" }
+authors = [{ name = "Gregor Lueg", email = "gregorlueg@me.com" }]
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.23", "beartype>=0.19"]
+dynamic = ["version"]
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+[project.urls]
+Documentation = "https://gregorlueg.github.io/evoc-rs/"
+Repository = "https://github.com/GregorLueg/evoc-rs"
+Changelog = "https://github.com/GregorLueg/evoc-rs/blob/main/CHANGELOG.md"
+
+[dependency-groups]
+dev = [
+    "maturin>=1.15,<2.0",
+    "pytest>=8",
+    "ruff>=0.9",
+    "ty>=0.0.1",
+    "scikit-learn>=1.4",
+]
+# mkdocstrings reads the installed package, so a docs build needs the compiled
+# extension present: `maturin develop --release` before `mkdocs build`.
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.27",
+]
+
+[tool.maturin]
+manifest-path = "Cargo.toml"
+module-name = "evoc_rs._evoc_rs"
+python-source = "."
+strip = true
+include = ["evoc_rs/py.typed", "evoc_rs/*.pyi"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+# `X` for the design matrix is the scikit-learn convention this estimator is
+# deliberately matching, as an argument (N803) and as a local (N806).
+ignore = ["N803", "N806"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["evoc_rs"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

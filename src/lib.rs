@@ -44,6 +44,14 @@ use crate::prelude::*;
 #[cfg(feature = "gpu")]
 use crate::nearest_neighbours::nearest_neighbour_gpu::*;
 
+/// Version of this crate.
+///
+/// Exposed so a dependent can report which version of the numerics it was
+/// built against. The Python bindings version independently of this crate and
+/// vendor its source through a path dependency, so their own version number
+/// says nothing about what is inside the wheel; this does.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 ////////////
 // Params //
 ////////////

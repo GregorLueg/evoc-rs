@@ -1,5 +1,15 @@
 # Rust
 /target
+python/target
+
+# Python bindings
+python/.venv
+python/evoc_rs/*.so
+python/evoc_rs/*.pyd
+python/site
+__pycache__/
+.pytest_cache/
+.ruff_cache/
 
 # Apple
 .DS_Store
