@@ -2,6 +2,25 @@
 
 ## 0.3.0
 
+**Stability**
+
+- `f32` and `f64` now return the same clustering for the same data. They did
+  not before: `symmetrise_graph` evaluated the t-conorm as `a + b - a*b`, which
+  is algebraically exactly 1 when either input is but rounds to 1 +/- 1 ulp in
+  floating point. A point's own nearest neighbour has `dist == rho`, so around
+  7% of graph edges carry exactly 1.0, and label propagation thresholds on
+  exactly 1.0. Which edges fell one ulp short differed between precisions, so
+  the two disagreed on which nodes to label and the clusterings diverged from
+  there. Snapping the endpoint takes label agreement from 2 seeds in 10 to 9,
+  mean ARI 1.0.
+
+  **This is a deliberate divergence from the Python reference**, which
+  evaluates the bare expression and carries the same fragility. Reproducibility
+  across precisions was judged worth more than bit-parity, not least because
+  the GPU path is `f32`-only and could not otherwise be checked against the CPU
+  one. It does not make the clustering more accurate, only consistent.
+  `integration_12_precisions_agree` guards the property.
+
 **Python**
 
 - Python bindings under `python/`, built with PyO3 and maturin. A

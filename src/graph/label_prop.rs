@@ -63,6 +63,13 @@ fn label_prop_iteration<T: EvocFloat>(csr: &Csr<T>, labels: &[i64]) -> Vec<i64> 
             }
             // find winning label.
             let mut best = -1i64;
+            // Threshold, and it sits on a value the data produces exactly: a
+            // single edge weighted 1.0 is accepted by the `v == max_vote` arm
+            // below, one weighted 1.0 - 1 ulp is rejected outright. That makes
+            // this line load-bearing for reproducibility, and it is why
+            // `symmetrise_graph` snaps its t-conorm endpoint rather than
+            // letting the rounding decide. Do not relax that snap without
+            // revisiting this.
             let mut max_vote = T::one(); // threshold
             let mut _tie_count = 1usize;
             for &(l, v) in &votes {
