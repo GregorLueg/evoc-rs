@@ -11,6 +11,7 @@ use num_traits::Float;
 use rayon::prelude::*;
 use std::default::Default;
 
+use crate::nearest_neighbours::rescale_distances;
 use crate::prelude::*;
 
 /////////////
@@ -359,6 +360,8 @@ where
         .into_par_iter()
         .map(|mut v| v.drain(1..).collect())
         .collect();
+
+    let knn_dist = rescale_distances(knn_dist, &params_nn.dist_metric);
 
     Ok((knn_indices, knn_dist))
 }

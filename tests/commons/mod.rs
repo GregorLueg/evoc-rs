@@ -1,13 +1,37 @@
 use rand::rngs::SmallRng;
 use rand::{RngExt, SeedableRng};
 
-/// Generate `n_clusters` well-separated Gaussian blobs in `dim` dimensions.
+/// Generate `n_clusters` isotropic Gaussian blobs in `dim` dimensions.
 ///
-/// Each cluster centre is placed at `(i * separation, 0, 0, ...)` with
-/// Gaussian noise of standard deviation `spread` added per coordinate.
+/// Cluster `c` is centred at `(c * separation, 0, ..., 0)` and every coordinate
+/// carries independent Gaussian noise of standard deviation `spread`.
 ///
-/// Returns `(data, labels)` where `data[i]` is a point and `labels[i]` is
-/// the ground-truth cluster index.
+/// The centre offset is one-dimensional while the noise is `dim`-dimensional,
+/// so the typical within-cluster distance is `spread * sqrt(2 * dim)` while the
+/// adjacent-centre distance stays at `separation`. Separability therefore
+/// degrades as `dim` grows for a fixed `separation`. Keep `separation` well
+/// above `spread * sqrt(2 * dim)`.
+///
+/// Use this for the tests that consume the raw coordinates (MST, linkage,
+/// condensed tree, fuzzy graph). It is a poor fixture for end-to-end `evoc`
+/// accuracy: an isotropic blob embeds to a near-uniform density, the
+/// persistence extraction has nothing to lock onto, and the selected layer
+/// fragments unpredictably with the data seed. Use
+/// `ann_search_rs::synthetic::generate_clustered_data` there.
+///
+/// ### Params
+///
+/// * `n_per_cluster` - Points drawn per cluster.
+/// * `n_clusters` - Number of clusters.
+/// * `dim` - Dimensionality of each point.
+/// * `separation` - Distance between adjacent cluster centres along axis 0.
+/// * `spread` - Per-coordinate standard deviation of the Gaussian noise.
+/// * `seed` - Random seed for reproducibility.
+///
+/// ### Returns
+///
+/// `(data, labels)` where `data[i]` is a point and `labels[i]` its
+/// ground-truth cluster index.
 pub fn make_blobs(
     n_per_cluster: usize,
     n_clusters: usize,
@@ -40,6 +64,14 @@ pub fn make_blobs(
 }
 
 /// Count the number of distinct non-noise clusters in a label vector.
+///
+/// ### Params
+///
+/// * `labels` - Cluster labels, `-1` for noise.
+///
+/// ### Returns
+///
+/// The number of non-noise clusters.
 #[allow(dead_code)] // clippy being stupid
 pub fn count_clusters(labels: &[i64]) -> usize {
     labels
@@ -55,6 +87,20 @@ pub fn count_clusters(labels: &[i64]) -> usize {
 ///
 /// Uses a simple majority-vote alignment: for each predicted cluster, find
 /// the most common ground-truth label and count agreements.
+///
+/// This is purity, not a matched accuracy. Several predicted clusters may map
+/// to the same ground-truth label, so over-segmentation is not penalised;
+/// noise points are counted as wrong, so a conservative clustering is.
+///
+/// ### Params
+///
+/// * `predicted` - Predicted cluster labels, `-1` for noise.
+/// * `ground_truth` - True cluster index per point.
+///
+/// ### Returns
+///
+/// The fraction of points in `[0, 1]` assigned to a cluster whose majority
+/// ground-truth label matches their own.
 #[allow(dead_code)] // used by integration_tests only
 pub fn cluster_accuracy(predicted: &[i64], ground_truth: &[usize]) -> f64 {
     use std::collections::HashMap;

@@ -11,6 +11,7 @@ use cubecl_utils_rs::CubeclFloat;
 use faer::MatRef;
 use rayon::prelude::*;
 
+use crate::nearest_neighbours::rescale_distances;
 use crate::prelude::*;
 
 /////////////
@@ -301,6 +302,8 @@ where
                 .unzip()
         })
         .unzip();
+
+    let knn_dist = rescale_distances(knn_dist, &params_nn.dist_metric);
 
     Ok((knn_indices, knn_dist))
 }

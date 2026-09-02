@@ -4,6 +4,7 @@
 mod commons;
 use commons::*;
 
+use ann_search_rs::synthetic::generate_clustered_data;
 use cubecl::wgpu::{WgpuDevice, WgpuRuntime};
 use faer::Mat;
 
@@ -11,18 +12,24 @@ use evoc_rs::nearest_neighbours::nearest_neighbour_gpu::run_ann_search_gpu;
 use evoc_rs::prelude::*;
 use evoc_rs::{EvocParams, evoc_gpu};
 
-/// Convert `Vec<Vec<f32>>` from make_blobs into a faer matrix.
+/// Fixture for the end-to-end accuracy tests: four clusters plus inter-cluster
+/// bridges. Over 30 EVoC seeds this lands in [0.965, 0.998] on every CPU and
+/// GPU backend, whereas `make_blobs` swings across the whole [0.49, 0.99] range
+/// with the data seed.
+const ACC_FIXTURE: (usize, usize, usize, u64) = (600, 32, 4, 1);
+
+/// Convert `Vec<Vec<f64>>` from make_blobs into a faer matrix.
 fn to_mat(data: &[Vec<f64>]) -> Mat<f32> {
     let n = data.len();
     let d = data[0].len();
     Mat::from_fn(n, d, |i, j| data[i][j] as f32)
 }
 
-/// End-to-end GPU EVoC on well-separated blobs should recover clusters.
+/// End-to-end GPU EVoC on clustered data should recover the clusters.
 #[test]
-fn gpu_integration_01_two_clusters_exhaustive() {
-    let (data, gt) = make_blobs(100, 2, 8, 20.0, 5.0, 42);
-    let mat = to_mat(&data);
+fn gpu_integration_01_clusters_exhaustive() {
+    let (n, dim, nc, seed) = ACC_FIXTURE;
+    let (mat, gt) = generate_clustered_data::<f32>(n, dim, nc, seed);
 
     let params = EvocParams::<f32>::default();
     let nn_params = NearestNeighbourParamsGpuEvoc::<f32>::default();
@@ -40,39 +47,21 @@ fn gpu_integration_01_two_clusters_exhaustive() {
     )
     .unwrap();
 
-    // debug
-    let gt = &gt; // ground truth from make_blobs
-    let mut impure = 0usize;
-    for (i, nb) in result.nn_indices.iter().enumerate() {
-        let bad = nb.iter().filter(|&&j| gt[j] != gt[i]).count();
-        if bad > 0 {
-            impure += 1;
-            if impure <= 5 {
-                println!(
-                    "point {} (cluster {}): {} cross-cluster neighbours",
-                    i, gt[i], bad
-                );
-            }
-        }
-    }
-    println!(
-        "{}/{} points have impure neighbourhoods",
-        impure,
-        result.nn_indices.len()
-    );
-
     assert!(!result.cluster_layers.is_empty());
-    let labels = result.best_labels();
-    let acc = cluster_accuracy(labels, gt);
-    println!("Two-cluster accuracy (exhaustive_gpu): {:.3}", acc);
+    let acc = cluster_accuracy(result.best_labels(), &gt);
+    println!(
+        "Accuracy (exhaustive_gpu): {:.3}, k = {}",
+        acc,
+        result.n_clusters()
+    );
     assert!(acc > 0.95, "Accuracy {:.3} below threshold", acc);
 }
 
-/// Same test with ivf_gpu — less precise but should still separate clusters.
+/// Same test with ivf_gpu, less precise but should still separate clusters.
 #[test]
-fn gpu_integration_02_two_clusters_ivf() {
-    let (data, gt) = make_blobs(100, 2, 8, 20.0, 5.0, 42);
-    let mat = to_mat(&data);
+fn gpu_integration_02_clusters_ivf() {
+    let (n, dim, nc, seed) = ACC_FIXTURE;
+    let (mat, gt) = generate_clustered_data::<f32>(n, dim, nc, seed);
 
     let params = EvocParams::<f32>::default();
     let nn_params = NearestNeighbourParamsGpuEvoc::<f32> {
@@ -95,9 +84,12 @@ fn gpu_integration_02_two_clusters_ivf() {
     )
     .unwrap();
 
-    let labels = result.best_labels();
-    let acc = cluster_accuracy(labels, &gt);
-    println!("Two-cluster accuracy (ivf_gpu): {:.3}", acc);
+    let acc = cluster_accuracy(result.best_labels(), &gt);
+    println!(
+        "Accuracy (ivf_gpu): {:.3}, k = {}",
+        acc,
+        result.n_clusters()
+    );
     assert!(acc > 0.95, "IVF accuracy {:.3} too low", acc);
 }
 
@@ -140,8 +132,8 @@ fn gpu_integration_03_all_backends_dispatch() {
 fn gpu_integration_04_structural_agreement_with_cpu() {
     use evoc_rs::evoc;
 
-    let (data, gt) = make_blobs(100, 3, 8, 20.0, 5.0, 42);
-    let mat = to_mat(&data);
+    let (n, dim, nc, seed) = ACC_FIXTURE;
+    let (mat, gt) = generate_clustered_data::<f32>(n, dim, nc, seed);
 
     let params = EvocParams::<f32>::default();
 
@@ -175,10 +167,10 @@ fn gpu_integration_04_structural_agreement_with_cpu() {
     let acc_gpu = cluster_accuracy(gpu.best_labels(), &gt);
     println!("CPU accuracy: {:.3}, GPU accuracy: {:.3}", acc_cpu, acc_gpu);
 
-    assert!(acc_cpu > 0.6 && acc_gpu > 0.6);
+    assert!(acc_cpu > 0.9 && acc_gpu > 0.9);
     let k_cpu = cpu.n_clusters();
     let k_gpu = gpu.n_clusters();
-    println!("Cluster counts — CPU: {}, GPU: {}", k_cpu, k_gpu);
+    println!("Cluster counts - CPU: {}, GPU: {}", k_cpu, k_gpu);
     let diff = (k_cpu as isize - k_gpu as isize).unsigned_abs();
     assert!(
         diff <= 2,
@@ -191,8 +183,8 @@ fn gpu_integration_04_structural_agreement_with_cpu() {
 /// Precomputed kNN path should produce a valid clustering.
 #[test]
 fn gpu_integration_05_precomputed_knn() {
-    let (data, gt) = make_blobs(100, 2, 8, 20.0, 5.0, 42);
-    let mat = to_mat(&data);
+    let (n, dim, nc, seed) = ACC_FIXTURE;
+    let (mat, gt) = generate_clustered_data::<f32>(n, dim, nc, seed);
     let k = 15;
 
     let nn_params = NearestNeighbourParamsGpuEvoc::<f32>::default();

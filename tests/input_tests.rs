@@ -102,7 +102,10 @@ fn input_owned_mat_matches_flat_triple() {
 
     for i in 0..n {
         for j in 0..dim {
-            assert_eq!(from_mat.as_mat_ref()[(i, j)], from_flat.as_mat_ref()[(i, j)]);
+            assert_eq!(
+                from_mat.as_mat_ref()[(i, j)],
+                from_flat.as_mat_ref()[(i, j)]
+            );
         }
     }
 }
