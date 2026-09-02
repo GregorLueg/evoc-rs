@@ -8,6 +8,8 @@ is a thin scikit-learn shaped layer over it.
 
 ## Install
 
+You can just install from PyPI.
+
 ```bash
 uv pip install evoc-rs
 ```
