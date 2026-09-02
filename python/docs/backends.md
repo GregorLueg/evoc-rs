@@ -40,9 +40,32 @@ alongside the clustering parameters. Only the ones matching your
 | --- | --- |
 | `annoy` | `n_tree`, `search_budget` |
 | `hnsw` | `m`, `ef_construction`, `ef_search` |
-| `nndescent` | `diversify_prob`, `delta`, `ef_budget` |
+| `nndescent` | `diversify_prob`, `delta`, `ef_budget`, `extract_knn` |
 | `balltree` | `bt_budget` |
 | `ivf` | `n_list`, `n_probes` |
+
+### The NN-Descent fast track
+
+`extract_knn` is on by default and worth leaving on. NN-Descent's whole job is
+to build a kNN graph, so querying it for a self-kNN graph afterwards re-does
+work that has already been done. Extraction hands back the graph directly and
+skips the beam search, along with every beam parameter (`ef_budget` on the CPU,
+`beam_width` and friends on the GPU).
+
+The graph degree is widened to cover `k` when it is set, since extraction
+cannot return more neighbours than the graph holds.
+
+On 6000 points in 32 dimensions at `k = 15`, against exact ground truth:
+
+| path | recall | time |
+| --- | --- | --- |
+| `nndescent`, beam search | 1.000 | 134 ms |
+| `nndescent`, extract | 1.000 | 120 ms |
+| `nndescent_gpu`, beam search | 0.998 | 274 ms |
+| `nndescent_gpu`, extract | 0.994 | 53 ms |
+
+The GPU is where it pays. Turn it off if you want the beam search's last
+fraction of a percent of recall.
 
 `None` on any optional knob means the crate picks. `n_list` defaults to
 `sqrt(n)`, `n_probes` to `sqrt(n_list)`, and the NN-Descent query budget is

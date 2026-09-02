@@ -2,6 +2,31 @@
 
 ## 0.3.0
 
+**Features**
+
+- NN-Descent can hand back the graph it already built instead of beam-searching
+  it, via `extract_knn` on both `NearestNeighbourParamsEvoc` and
+  `NearestNeighbourParamsGpuEvoc`. **On by default.** A self-kNN query
+  re-searches a graph that is already a kNN graph, which is the work the descent
+  just did. The graph degree is widened to cover `k` when it is set, since
+  extraction cannot return more neighbours than the graph holds.
+
+  On 6000 points in 32 dimensions at `k = 15`, against exact ground truth:
+  `nndescent` goes 134 ms to 120 ms at recall 1.000 either way, and
+  `nndescent_gpu` goes 274 ms to 53 ms for recall 0.998 to 0.994. The GPU is
+  where it pays, which matters now that `nndescent_gpu` is the default GPU
+  backend.
+- `nndescent_gpu` replaces `ivf_gpu` as the default GPU kNN backend.
+- More inputs accepted: `evoc` and `evoc_gpu` take a faer matrix, an ndarray
+  2-D array (behind the new `ndarray` feature) or a row-major
+  `(&[T], n_samples, n_features)` tuple, via the new `EvocMatrix` trait. Every
+  layout bar a non-contiguous ndarray is zero-copy, and the pipeline below the
+  entry points stays on `MatRef`.
+- `evoc_rs::VERSION`, so a dependent can report which version of the numerics
+  it was built against.
+- Version update on `ann-search-rs` to 0.8.0, for substantially faster
+  approximate nearest neighbour searches.
+
 **Stability**
 
 - `f32` and `f64` now return the same clustering for the same data. They did
@@ -36,18 +61,6 @@
   for the GPU kNN path. Documentation at
   <https://gregorlueg.github.io/evoc-rs/>.
 
-**Features**
-
-- More inputs accepted: `evoc` and `evoc_gpu` take a faer matrix, an ndarray
-  2-D array (behind the new `ndarray` feature) or a row-major
-  `(&[T], n_samples, n_features)` tuple, via the new `EvocMatrix` trait. Every
-  layout bar a non-contiguous ndarray is zero-copy, and the pipeline below the
-  entry points stays on `MatRef`.
-- `evoc_rs::VERSION`, so a dependent can report which version of the numerics
-  it was built against.
-- Version update on `ann-search-rs` to 0.8.0, for substantially faster
-  approximate nearest neighbour searches.
-
 **Breaking changes**
 
 - `evoc` and `evoc_gpu` take `impl EvocMatrix<T>` rather than `MatRef<T>`.
@@ -58,6 +71,9 @@
   `select_diverse_peaks` takes `&[f64]` for the curve.
   `EvocResult::persistence_scores` was already `f64` and is unchanged, so this
   only affects callers reaching into the persistence module directly.
+- `NearestNeighbourParamsEvoc::new` and `NearestNeighbourParamsGpuEvoc::new`
+  take an `extract_knn` argument. Struct-literal and `..Default::default()`
+  construction is unaffected.
 
 ## 0.2.7
 

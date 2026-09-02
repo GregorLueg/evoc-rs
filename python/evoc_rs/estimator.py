@@ -67,7 +67,11 @@ class EVoC(BaseEstimator):
         ef_search: HNSW search budget.
         diversify_prob: NN-Descent diversification probability.
         delta: NN-Descent convergence threshold.
-        ef_budget: NN-Descent beam budget when querying. None auto-picks.
+        ef_budget: NN-Descent beam budget when querying. Ignored when
+            extract_knn is True, since no search runs.
+        extract_knn: For nndescent, return the graph the descent already built
+            rather than beam-searching it. On by default: a self-kNN query
+            re-does the work the descent just did.
         bt_budget: BallTree search budget, as a fraction of the sample count.
         n_list: IVF cells. None uses sqrt(n).
         n_probes: IVF cells probed per query. None uses sqrt(n_list).
@@ -126,6 +130,7 @@ class EVoC(BaseEstimator):
         diversify_prob: float = 1.0,
         delta: float = 0.001,
         ef_budget: int | None = None,
+        extract_knn: bool = True,
         bt_budget: float = 0.05,
         n_list: int | None = None,
         n_probes: int | None = None,
@@ -153,6 +158,7 @@ class EVoC(BaseEstimator):
         self.diversify_prob = diversify_prob
         self.delta = delta
         self.ef_budget = ef_budget
+        self.extract_knn = extract_knn
         self.bt_budget = bt_budget
         self.n_list = n_list
         self.n_probes = n_probes
@@ -203,6 +209,7 @@ class EVoC(BaseEstimator):
             diversify_prob=self.diversify_prob,
             delta=self.delta,
             ef_budget=self.ef_budget,
+            extract_knn=self.extract_knn,
             bt_budget=self.bt_budget,
             n_list=self.n_list,
             n_probes=self.n_probes,
@@ -311,6 +318,9 @@ class EVoCGpu(EVoC):
         beam_width: Beam width when querying. None auto-picks.
         max_beam_iters: Beam iterations when querying. None auto-picks.
         n_entry_points: Entry points when querying. None auto-picks.
+        extract_knn: For nndescent_gpu, return the CAGRA graph the build
+            already produced rather than beam-searching it. On by default, and
+            worth keeping: it is roughly 5x faster for about 0.4% recall.
     """
 
     _BACKENDS: ClassVar[frozenset[str]] = GPU_BACKENDS
@@ -343,6 +353,7 @@ class EVoCGpu(EVoC):
         beam_width: int | None = None,
         max_beam_iters: int | None = None,
         n_entry_points: int | None = None,
+        extract_knn: bool = True,
         seed: int = 42,
         verbose: int = 0,
     ) -> None:
@@ -369,6 +380,7 @@ class EVoCGpu(EVoC):
         self.beam_width = beam_width
         self.max_beam_iters = max_beam_iters
         self.n_entry_points = n_entry_points
+        self.extract_knn = extract_knn
         self.seed = seed
         self.verbose = verbose
 
@@ -416,6 +428,7 @@ class EVoCGpu(EVoC):
             beam_width=self.beam_width,
             max_beam_iters=self.max_beam_iters,
             n_entry_points=self.n_entry_points,
+            extract_knn=self.extract_knn,
             seed=self.seed,
             verbose=self.verbose,
         )

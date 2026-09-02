@@ -105,6 +105,8 @@ pub(crate) struct NnArgs {
     pub delta: f64,
     /// NNDescent: beam search budget for querying.
     pub ef_budget: Option<usize>,
+    /// NNDescent: return the built graph instead of searching it.
+    pub extract_knn: bool,
     /// BallTree: proportion of N to search.
     pub bt_budget: f64,
     /// IVF: number of lists.
@@ -130,6 +132,7 @@ impl NnArgs {
             diversify_prob: T::from(self.diversify_prob).unwrap(),
             delta: T::from(self.delta).unwrap(),
             ef_budget: self.ef_budget,
+            extract_knn: self.extract_knn,
             bt_budget: T::from(self.bt_budget).unwrap(),
             n_list: self.n_list,
             n_probes: self.n_probes,

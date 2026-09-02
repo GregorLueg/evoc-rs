@@ -56,6 +56,8 @@ struct NnGpuArgs {
     max_beam_iters: Option<usize>,
     /// NNDescent-GPU: entry points when querying.
     n_entry_points: Option<usize>,
+    /// NNDescent-GPU: return the built CAGRA graph instead of searching it.
+    extract_knn: bool,
 }
 
 impl NnGpuArgs {
@@ -73,6 +75,7 @@ impl NnGpuArgs {
             beam_width: self.beam_width,
             max_beam_iters: self.max_beam_iters,
             n_entry_points: self.n_entry_points,
+            extract_knn: self.extract_knn,
         }
     }
 }
@@ -116,6 +119,7 @@ impl NnGpuArgs {
     beam_width,
     max_beam_iters,
     n_entry_points,
+    extract_knn,
     seed = 42,
     verbose = 0,
 ))]
@@ -147,6 +151,7 @@ pub(crate) fn run_evoc_gpu<'py>(
     beam_width: Option<usize>,
     max_beam_iters: Option<usize>,
     n_entry_points: Option<usize>,
+    extract_knn: bool,
     seed: usize,
     verbose: usize,
 ) -> PyResult<Bound<'py, PyAny>> {
@@ -179,6 +184,7 @@ pub(crate) fn run_evoc_gpu<'py>(
         beam_width,
         max_beam_iters,
         n_entry_points,
+        extract_knn,
     };
 
     let (data, n, dim) = convert::flat(&a)?;
