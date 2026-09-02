@@ -53,23 +53,9 @@ skips the beam search, along with every beam parameter (`ef_budget` on the CPU,
 `beam_width` and friends on the GPU).
 
 The graph degree is widened to cover `k` when it is set, since extraction
-cannot return more neighbours than the graph holds.
-
-On 6000 points in 32 dimensions at `k = 15`, against exact ground truth:
-
-| path | recall | time |
-| --- | --- | --- |
-| `nndescent`, beam search | 1.000 | 134 ms |
-| `nndescent`, extract | 1.000 | 120 ms |
-| `nndescent_gpu`, beam search | 0.998 | 274 ms |
-| `nndescent_gpu`, extract | 0.994 | 53 ms |
-
-The GPU is where it pays. Turn it off if you want the beam search's last
-fraction of a percent of recall.
-
-`None` on any optional knob means the crate picks. `n_list` defaults to
-`sqrt(n)`, `n_probes` to `sqrt(n_list)`, and the NN-Descent query budget is
-derived from `n_neighbours`.
+cannot return more neighbours than the graph holds. `None` on any optional knob
+means the crate picks. `n_list` defaults to `sqrt(n)`, `n_probes` to
+`sqrt(n_list)`, and the NN-Descent query budget is derived from `n_neighbours`.
 
 ## Metric
 

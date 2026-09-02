@@ -10,12 +10,6 @@
   re-searches a graph that is already a kNN graph, which is the work the descent
   just did. The graph degree is widened to cover `k` when it is set, since
   extraction cannot return more neighbours than the graph holds.
-
-  On 6000 points in 32 dimensions at `k = 15`, against exact ground truth:
-  `nndescent` goes 134 ms to 120 ms at recall 1.000 either way, and
-  `nndescent_gpu` goes 274 ms to 53 ms for recall 0.998 to 0.994. The GPU is
-  where it pays, which matters now that `nndescent_gpu` is the default GPU
-  backend.
 - `nndescent_gpu` replaces `ivf_gpu` as the default GPU kNN backend.
 - More inputs accepted: `evoc` and `evoc_gpu` take a faer matrix, an ndarray
   2-D array (behind the new `ndarray` feature) or a row-major

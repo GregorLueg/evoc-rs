@@ -52,8 +52,8 @@ Knobs are `n_list` and `n_probes` for `ivf_gpu`, and `k`, `k_build`, `n_tree`,
 
 `extract_knn` is on by default and hands back the CAGRA graph the build already
 produced rather than beam-searching it, which skips every beam parameter above.
-On 6000 points in 32 dimensions that is 53 ms against 274 ms, for recall 0.994
-against 0.998. Worth keeping unless you need that last fraction of a percent.
+If you want to make sure your graph is as good as possible, use
+`extract_knn = False`.
 
 The two CAGRA degrees are worth knowing about. `k` is the graph degree after
 pruning and `k_build` the degree before it, and both are independent of the
