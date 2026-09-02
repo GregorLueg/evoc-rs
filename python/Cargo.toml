@@ -1,0 +1,62 @@
+[package]
+# Versioned independently of `evoc-rs`, on purpose. Coupling the two means a
+# docstring fix here forces a crates.io release of a crate whose Rust source did
+# not change, and that version number is permanent. The wheel reports the core
+# version it vendored as `__core_version__` instead, which is the question
+# lockstep was actually answering.
+name = "evoc-rs-py"
+version = "0.1.0"
+edition = "2021"
+authors = ["Gregor Lueg <gregorlueg@me.com>"]
+license = "MIT AND BSD-2-Clause"
+description = "Python bindings for evoc-rs"
+publish = false
+
+# Own workspace root. The repo root has no `[workspace]` table, so cargo would
+# walk past it today, but that is accidental rather than intended.
+[workspace]
+
+[lib]
+name = "_evoc_rs"
+crate-type = ["cdylib"]
+
+[features]
+## On by default. The published wheel carries the GPU kNN backends, because the
+## backend is wgpu rather than CUDA: there is no driver runtime to ship, and the
+## whole thing costs a few MB. Splitting it into a second distribution buys
+## nothing at that price.
+default = ["gpu"]
+
+## Bind the CubeCL/wgpu GPU kNN backends alongside the CPU ones. Fixed at
+## wheel-build time: a Python extra cannot switch it, since extras only add
+## Python requirements and never change the compiled artefact. Build with
+## `--no-default-features` for a CPU-only wheel.
+gpu = ["evoc-rs/gpu", "dep:cubecl"]
+
+[dependencies]
+evoc-rs = { path = ".." }
+# `cpu` is deliberately absent. CubeCL's software CPU runtime is test-only and
+# pulls a prebuilt LLVM needing glibc 2.33+, which no manylinux container has,
+# so a wheel carrying it cannot be built for Linux. Nothing here calls it.
+cubecl = { version = "0.10.0", features = ["wgpu"], optional = true }
+faer = "0.23.2"
+num-traits = "0.2"
+numpy = "0.29"
+pyo3 = { version = "0.29", features = ["extension-module", "abi3-py310"] }
+rayon = "1.11"
+
+# Profiles are only read from the workspace root, and this is its own workspace,
+# so the library crate's profile does not reach here. Thin LTO gets nearly all
+# of the win: the hot SIMD kernels are already inlined within their own crate,
+# and the pyo3 shim is not hot.
+[profile.release]
+lto = "thin"
+codegen-units = 1
+# Must stay unwind. pyo3 catches panics at the FFI boundary, and the GPU probe
+# relies on catching one.
+panic = "unwind"
+
+# `maturin develop` builds dev by default, and a debug-speed embedding is
+# useless.
+[profile.dev]
+opt-level = 2

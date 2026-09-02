@@ -23,7 +23,6 @@ use ann_search_rs::cpu::hnsw::{HnswIndex, HnswState};
 use ann_search_rs::cpu::nndescent::{NNDescent, NNDescentQuery};
 use ann_search_rs::prelude::AnnSearchFloat;
 use ann_search_rs::utils::nndescent_utils::ApplySortedUpdates;
-use faer::MatRef;
 use std::time::Instant;
 
 #[cfg(feature = "gpu")]
@@ -44,6 +43,14 @@ use crate::prelude::*;
 
 #[cfg(feature = "gpu")]
 use crate::nearest_neighbours::nearest_neighbour_gpu::*;
+
+/// Version of this crate.
+///
+/// Exposed so a dependent can report which version of the numerics it was
+/// built against. The Python bindings version independently of this crate and
+/// vendor its source through a path dependency, so their own version number
+/// says nothing about what is inside the wheel; this does.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 ////////////
 // Params //
@@ -181,7 +188,9 @@ impl<T: EvocFloat> EvocResult<T> {
 ///
 /// ### Params
 ///
-/// * `data` — input matrix with shape `(n_points, n_features)`.
+/// * `data` — input data as samples x features. Accepts a faer matrix, an
+///   ndarray 2-D array (with the `ndarray` feature) or a row-major
+///   `(&[T], n_samples, n_features)` tuple. See [`EvocMatrix`].
 /// * `ann_type` — ANN backend identifier (e.g. `"nndescent"`, `"hnsw"`).
 /// * `precomputed_knn` — pre-built `(indices, distances)` pair; pass `None`
 ///   to build the graph from `data`.
@@ -197,7 +206,7 @@ impl<T: EvocFloat> EvocResult<T> {
 /// An [`EvocResult`] containing cluster layers, membership strengths,
 /// persistence scores, and the kNN graph.
 pub fn evoc<T>(
-    data: MatRef<T>,
+    data: impl EvocMatrix<T>,
     ann_type: String,
     precomputed_knn: PreComputedKnn<T>,
     evoc_params: &EvocParams<T>,
@@ -210,6 +219,8 @@ where
     NNDescent<T>: ApplySortedUpdates<T> + NNDescentQuery<T>,
     HnswIndex<T>: HnswState<T>,
 {
+    let data_input = data.to_mat_input();
+    let data = data_input.as_mat_ref();
     let verbosity = parse_verbosity_level(verbose);
 
     let start_all = Instant::now();
@@ -458,7 +469,9 @@ where
 ///
 /// ### Params
 ///
-/// * `data` — input matrix with shape `(n_points, n_features)`.
+/// * `data` — input data as samples x features. Accepts a faer matrix, an
+///   ndarray 2-D array (with the `ndarray` feature) or a row-major
+///   `(&[T], n_samples, n_features)` tuple. See [`EvocMatrix`].
 /// * `ann_type` — GPU ANN backend: `"exhaustive_gpu"`, `"ivf_gpu"` or
 ///   `"nndescent_gpu"`.
 /// * `precomputed_knn` — pre-built `(indices, distances)` pair; pass `None`
@@ -478,7 +491,7 @@ where
 #[allow(clippy::too_many_arguments)]
 #[cfg(feature = "gpu")]
 pub fn evoc_gpu<T, R>(
-    data: MatRef<T>,
+    data: impl EvocMatrix<T>,
     ann_type: String,
     precomputed_knn: PreComputedKnn<T>,
     evoc_params: &EvocParams<T>,
@@ -491,6 +504,8 @@ where
     T: EvocFloat + AnnSearchFloat + CubeclFloat,
     R: Runtime,
 {
+    let data_input = data.to_mat_input();
+    let data = data_input.as_mat_ref();
     let start_all = Instant::now();
     let verbosity = parse_verbosity_level(verbose);
 

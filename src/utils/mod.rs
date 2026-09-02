@@ -2,5 +2,6 @@
 //! matrix multiplications.
 
 pub mod disjoint_set;
+pub mod input;
 pub mod sparse;
 pub mod traits;

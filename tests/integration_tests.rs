@@ -3,7 +3,11 @@
 mod commons;
 use commons::*;
 
+use ann_search_rs::synthetic::generate_clustered_data;
 use num_traits::ToPrimitive;
+
+use evoc_rs::prelude::*;
+use evoc_rs::{EvocParams, evoc};
 
 use evoc_rs::clustering::condensed_tree::*;
 use evoc_rs::clustering::linkage::*;
@@ -613,4 +617,96 @@ fn integration_10_fuzzy_graph_cluster_separation() {
         avg_intra,
         avg_inter,
     );
+}
+
+/////////////////////////
+// End-to-end pipeline //
+/////////////////////////
+
+/// Fixture for the end-to-end tests, matching the GPU suite so the two are
+/// comparable. See `ACC_FIXTURE` in `integration_tests_gpu.rs`.
+const ACC_FIXTURE: (usize, usize, usize, u64) = (600, 32, 4, 1);
+
+/// Run `evoc` end to end at one precision.
+///
+/// ### Params
+///
+/// * `seed` - Seed handed to the pipeline.
+///
+/// ### Returns
+///
+/// `(labels, n_clusters)` taken from the highest-persistence layer.
+fn cluster_at<T>(seed: usize) -> (Vec<i64>, usize)
+where
+    T: EvocFloat + ann_search_rs::prelude::AnnSearchFloat,
+    ann_search_rs::cpu::nndescent::NNDescent<T>:
+        ann_search_rs::utils::nndescent_utils::ApplySortedUpdates<T>
+            + ann_search_rs::cpu::nndescent::NNDescentQuery<T>,
+    ann_search_rs::cpu::hnsw::HnswIndex<T>: ann_search_rs::cpu::hnsw::HnswState<T>,
+{
+    let (n, dim, nc, data_seed) = ACC_FIXTURE;
+    let (mat, _) = generate_clustered_data::<T>(n, dim, nc, data_seed);
+
+    let result = evoc(
+        mat.as_ref(),
+        "kmknn".to_string(),
+        None,
+        &EvocParams::<T>::default(),
+        &NearestNeighbourParamsEvoc::<T>::default(),
+        seed,
+        0,
+    )
+    .expect("evoc should succeed on the fixture");
+
+    (result.best_labels().to_vec(), result.n_clusters())
+}
+
+/// The CPU pipeline should recover the planted clusters.
+///
+/// The GPU suite held the only end-to-end accuracy checks for a long time,
+/// which left the CPU path unverified on any machine without an adapter.
+#[test]
+fn integration_11_end_to_end_recovers_clusters() {
+    let (n, dim, nc, data_seed) = ACC_FIXTURE;
+    let (_, gt) = generate_clustered_data::<f64>(n, dim, nc, data_seed);
+
+    let (labels, k) = cluster_at::<f64>(42);
+    let acc = cluster_accuracy(&labels, &gt);
+
+    println!("End-to-end accuracy (kmknn, f64): {:.3}, k = {}", acc, k);
+    assert!(acc > 0.95, "Accuracy {:.3} below threshold", acc);
+}
+
+/// f32 and f64 must agree on the same data.
+///
+/// They did not before `symmetrise_graph` snapped its t-conorm endpoint:
+/// around 7% of graph edges sit on exactly 1.0, the bare `a + b - a*b` put a
+/// precision-dependent handful of them one ulp below, and label propagation
+/// thresholds on exactly 1.0. Agreement was 2 seeds in 10.
+///
+/// This guards the property rather than the implementation, so it catches a
+/// regression whatever reintroduces it.
+#[test]
+fn integration_12_precisions_agree() {
+    for seed in [7usize, 11, 23, 42] {
+        let (labels_32, k32) = cluster_at::<f32>(seed);
+        let (labels_64, k64) = cluster_at::<f64>(seed);
+
+        assert_eq!(
+            k32, k64,
+            "seed {seed}: f32 found {k32} clusters, f64 found {k64}"
+        );
+
+        let differing = labels_32
+            .iter()
+            .zip(&labels_64)
+            .filter(|(a, b)| a != b)
+            .count();
+        assert_eq!(
+            differing,
+            0,
+            "seed {seed}: {differing} of {} labels differ between f32 and f64",
+            labels_32.len()
+        );
+    }
 }

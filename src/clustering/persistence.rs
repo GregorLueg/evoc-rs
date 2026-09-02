@@ -20,8 +20,15 @@ pub struct ClusterBarcode<T> {
     pub size_death: T,
     /// parent cluster index
     pub parent: usize,
-    /// lambda value at death
-    pub lambda_death: T,
+    /// `exp(-1 / lambda)` at death.
+    ///
+    /// Always `f64`, whatever `T` the pipeline runs at. This is `exp(-d)` for
+    /// an MST distance `d`: `f32` drops to subnormal precision beyond `d ~ 87`
+    /// and flushes to zero beyond `d ~ 103`, where `f64` holds to `d ~ 745`. A
+    /// zero here contributes nothing to the persistence curve, so an `f32` run
+    /// on an embedding with a large spatial scale would silently lose a whole
+    /// cluster layer.
+    pub lambda_death: f64,
 }
 
 /// Compute the `min_cluster_size` barcode for all cluster nodes.
@@ -71,13 +78,13 @@ where
             size_birth: T::from(min_size).unwrap(),
             size_death: T::zero(),
             parent: n_points,
-            lambda_death: T::zero(),
+            lambda_death: 0.0,
         };
         n_nodes
     ];
 
     // root node
-    barcodes[0].lambda_death = T::zero();
+    barcodes[0].lambda_death = 0.0;
     barcodes[0].size_death = T::from(n_points).unwrap();
 
     // process cluster pairs (they come in pairs: two children per split)
@@ -94,10 +101,12 @@ where
         barcodes[idx_a].parent = node_a.parent;
         barcodes[idx_b].parent = node_b.parent;
 
-        // lambda at death = exp(-1/lambda_val) in the Python, but we
-        // store the raw lambda for now (the persistence computation
-        // uses it directly)
-        let lv = (-T::one() / node_a.lambda_val).exp();
+        // Evaluated in f64 whatever `T` is: this is `exp(-d)` for an MST
+        // distance `d`, and f32 goes subnormal past `d ~ 87` and flushes to
+        // zero past `d ~ 103`, where f64 holds to 745. Underflowing here drops
+        // the cluster's whole contribution to the persistence curve, so an f32
+        // run on a large-scale embedding would silently lose a layer.
+        let lv = (-1.0 / node_a.lambda_val.to_f64().unwrap()).exp();
         barcodes[idx_a].lambda_death = lv;
         barcodes[idx_b].lambda_death = lv;
 
@@ -131,8 +140,11 @@ where
 ///
 /// `(sizes, persistence)` where `sizes[i]` is a unique `min_cluster_size`
 /// threshold and `persistence[i]` is the total persistence at that threshold;
-/// both vecs are empty if `barcodes` is empty
-pub fn compute_total_persistence<T>(barcodes: &[ClusterBarcode<T>]) -> (Vec<T>, Vec<T>)
+/// both vecs are empty if `barcodes` is empty. The curve is `f64` whatever `T`
+/// is: contributions span many orders of magnitude and `find_peaks` then
+/// compares the sums exactly, so a term lost to `f32` rounding moves a peak
+/// and changes which layers are returned.
+pub fn compute_total_persistence<T>(barcodes: &[ClusterBarcode<T>]) -> (Vec<T>, Vec<f64>)
 where
     T: EvocFloat,
 {
@@ -144,7 +156,7 @@ where
     size_set.sort_by(|a, b| a.partial_cmp(b).unwrap());
     size_set.dedup();
 
-    let mut persistence = vec![T::zero(); size_set.len()];
+    let mut persistence = vec![0.0f64; size_set.len()];
 
     for (bc_idx, bc) in barcodes.iter().enumerate() {
         if bc_idx == 0 {
@@ -163,7 +175,7 @@ where
             .position(|&s| s >= bc.size_death)
             .unwrap_or(size_set.len());
 
-        let contribution = (bc.size_death - bc.size_birth) * bc.lambda_death;
+        let contribution = (bc.size_death - bc.size_birth).to_f64().unwrap() * bc.lambda_death;
         for k in birth_pos..death_pos {
             persistence[k] += contribution;
         }
@@ -278,7 +290,7 @@ where
 /// persistence order
 pub fn select_diverse_peaks<T>(
     peaks: &[usize],
-    persistence: &[T],
+    persistence: &[f64],
     sizes: &[T],
     barcodes: &[ClusterBarcode<T>],
     min_similarity_threshold: f64,
@@ -292,7 +304,7 @@ where
     }
 
     // sort peaks by descending persistence
-    let mut indexed: Vec<(usize, T)> = peaks.iter().map(|&p| (p, persistence[p])).collect();
+    let mut indexed: Vec<(usize, f64)> = peaks.iter().map(|&p| (p, persistence[p])).collect();
     indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
     let mut selected = Vec::new();
@@ -428,7 +440,7 @@ where
         for &peak in &selected {
             let birth_size = sizes[peak];
             let (labels, strengths) = extract_clusters_at_size(&ct, &barcodes, birth_size, n);
-            let p = persistence[peak].to_f64().unwrap_or(0.0);
+            let p = persistence[peak];
             all_labels.push(labels);
             all_strengths.push(strengths);
             all_persistence.push(p);
@@ -499,6 +511,45 @@ mod tests {
             vec![20.05, 0.05],
         ]);
         data
+    }
+
+    /// `exp(-1/lambda)` must survive a small lambda at f32.
+    ///
+    /// `lambda_val = 0.005` means `exp(-200)`, which flushes to zero in f32 and
+    /// is about 1.4e-87 in f64. Computing it at `T` would drop the cluster's
+    /// entire contribution to the persistence curve and silently lose a layer.
+    #[test]
+    fn test_lambda_death_survives_f32_underflow() {
+        // The f32 cliff has two stages: subnormal from about 87, flushed to
+        // zero from about 103. Only the second loses the value outright.
+        assert!((-100.0f32).exp() > 0.0, "still subnormal here");
+        assert_eq!((-200.0f32).exp(), 0.0, "gone by here");
+
+        let tree = CondensedTree {
+            nodes: vec![
+                CondensedNode {
+                    parent: 4,
+                    child: 5,
+                    lambda_val: 0.005f32,
+                    child_size: 2,
+                },
+                CondensedNode {
+                    parent: 4,
+                    child: 6,
+                    lambda_val: 0.005f32,
+                    child_size: 2,
+                },
+            ],
+            n_samples: 4,
+        };
+
+        let barcodes = min_cluster_size_barcode(&tree, 2);
+        let death = barcodes.iter().map(|b| b.lambda_death).fold(0.0, f64::max);
+
+        assert!(
+            death > 0.0,
+            "exp(-200) underflowed to zero; it must be evaluated in f64"
+        );
     }
 
     #[test]
