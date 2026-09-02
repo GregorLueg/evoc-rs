@@ -21,6 +21,14 @@
   one. It does not make the clustering more accurate, only consistent.
   `integration_12_precisions_agree` guards the property.
 
+- The persistence curve is computed in `f64` whatever `T` the pipeline runs at.
+  `lambda_death` is `exp(-d)` for an MST distance `d`, which in `f32` goes
+  subnormal past `d ~ 87` and flushes to zero past `d ~ 103`, where `f64` holds
+  to `d ~ 745`. A zero contributes nothing to the curve, so an `f32` run on an
+  embedding with a large spatial scale silently lost a whole cluster layer. The
+  contributions are summed in `f64` for the same reason: they span many orders
+  of magnitude and `find_peaks` compares the sums exactly.
+
 **Python**
 
 - Python bindings under `python/`, built with PyO3 and maturin. A
@@ -45,6 +53,11 @@
 - `evoc` and `evoc_gpu` take `impl EvocMatrix<T>` rather than `MatRef<T>`.
   Existing call sites passing a `MatRef` are unaffected, since `MatRef`
   implements the trait.
+- `ClusterBarcode::lambda_death` is `f64` rather than `T`,
+  `compute_total_persistence` returns `(Vec<T>, Vec<f64>)`, and
+  `select_diverse_peaks` takes `&[f64]` for the curve.
+  `EvocResult::persistence_scores` was already `f64` and is unchanged, so this
+  only affects callers reaching into the persistence module directly.
 
 ## 0.2.7
 
