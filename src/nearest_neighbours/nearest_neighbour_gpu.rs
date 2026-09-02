@@ -19,14 +19,14 @@ use crate::prelude::*;
 /////////////
 
 /// Which search algorithm to use for the GPU-accelerated approximate nearest
-/// neighbour search. Default is set to IVF GPU.
+/// neighbour search. Default is set to NNDescentGpu GPU.
 #[derive(Default)]
 pub enum AnnSearchGpu {
-    /// IvfGpu
     #[default]
-    IvfGpu,
     /// NNDescentGpu
     NNDescentGpu,
+    /// IvfGpu
+    IvfGpu,
     /// Exhaustive
     ExhaustiveGpu,
 }
