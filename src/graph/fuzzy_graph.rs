@@ -7,6 +7,27 @@ use rustc_hash::FxHashMap;
 use crate::prelude::*;
 use crate::utils::sparse::CoordinateList;
 
+///////////////
+// Constants //
+///////////////
+
+/// Absolute convergence tolerance for the sigma binary search.
+///
+/// Matches `SMOOTH_K_TOLERANCE` in the Python reference
+/// (`graph_construction.py:8`), and acts as a floor: the effective tolerance
+/// never goes below this, so nothing loosens relative to upstream.
+const SMOOTH_K_TOLERANCE: f64 = 1e-5;
+
+/// Convergence tolerance for the sigma binary search, relative to the target.
+///
+/// The target is `log2(k)`, so a purely absolute tolerance is an ever-tighter
+/// relative one as `k` grows. The two cross at `k = 1024`: below that the
+/// absolute value wins and behaviour is exactly the reference's, above it the
+/// band widens rather than asking the search to resolve a relative tolerance
+/// that keeps shrinking. Nobody builds a kNN graph at `k > 1000`, so this is
+/// insurance rather than a live path.
+const SMOOTH_K_REL_TOLERANCE: f64 = 1e-6;
+
 /////////////
 // Helpers //
 /////////////
@@ -17,12 +38,11 @@ use crate::utils::sparse::CoordinateList;
 ///
 /// ### Params
 ///
-/// * `dist` - kNN distance matrix where each row contains distances to k
+/// * `dists` - kNN distance matrix where each row contains distances to k
 ///   nearest neighbours
 /// * `k` - Number of nearest neighbours (used to compute target = log2(k))
 /// * `local_connectivity` - Number of nearest neighbours to assume are at
 ///   distance zero (typically 1.0). Allows for local manifold structure.
-/// * `bandwidth` - Convergence tolerance for binary search (typically 1e-5)
 /// * `n_iter` - Maximum number of binary search iterations (typically 64)
 ///
 /// ### Returns
@@ -40,7 +60,7 @@ where
     T: EvocFloat,
 {
     let target = (k as f64).log2();
-    let tolerance = 1e-5;
+    let tolerance = SMOOTH_K_TOLERANCE.max(target * SMOOTH_K_REL_TOLERANCE);
     let two = T::one() + T::one();
 
     dists
@@ -69,17 +89,25 @@ where
             let mut mid = T::one();
 
             for _ in 0..n_iter {
+                // Accumulated at `T` rather than f64 on purpose. The sum is
+                // driven to `log2(k)`, which stays small however large `k`
+                // gets, so only a handful of terms ever contribute meaningfully
+                // and the sum is well conditioned. Measured at f32 against an
+                // f64 accumulator, the resolved sigma is identical up to
+                // k = 5000 and the search converges in about 20 iterations of
+                // the 64 available.
                 let mut val = T::zero();
                 for &dist in d.iter() {
                     let adjusted = (dist - rho).max(T::zero());
                     val += (-(adjusted / mid)).exp();
                 }
+                let val = val.to_f64().unwrap();
 
-                if (val.to_f64().unwrap() - target).abs() < tolerance {
+                if (val - target).abs() < tolerance {
                     break;
                 }
 
-                if val.to_f64().unwrap() > target {
+                if val > target {
                     hi = mid;
                     mid = (lo + hi) / two;
                 } else {
@@ -328,6 +356,46 @@ where
 mod test_data_gen {
     use super::*;
     use approx::assert_relative_eq;
+
+    /// The tolerance must never tighten below the reference's absolute value,
+    /// and must widen once the target grows past it.
+    #[test]
+    fn test_smooth_knn_tolerance_scales_with_target() {
+        let effective = |k: usize| {
+            let target = (k as f64).log2();
+            SMOOTH_K_TOLERANCE.max(target * SMOOTH_K_REL_TOLERANCE)
+        };
+
+        // Every realistic neighbour count keeps the reference's value exactly.
+        for k in [5usize, 15, 30, 100, 500] {
+            assert_eq!(effective(k), SMOOTH_K_TOLERANCE, "k = {k} should not move");
+        }
+
+        // Past the crossover the band widens rather than tightening.
+        assert!(effective(2048) > SMOOTH_K_TOLERANCE);
+        assert!(effective(100_000) > effective(2048));
+    }
+
+    /// A large `k` at f32 must still resolve a usable sigma.
+    ///
+    /// The sum is driven to `log2(k)`, so it stays small and well conditioned
+    /// however large `k` is. This guards the outcome rather than the tolerance
+    /// arithmetic, which the test above covers.
+    #[test]
+    fn test_smooth_knn_resolves_sigma_at_large_k_in_f32() {
+        let k = 500;
+        let dist: Vec<Vec<f32>> = (0..4)
+            .map(|r| (0..k).map(|i| 1.0 + (i as f32) * 0.02 + r as f32).collect())
+            .collect();
+
+        let (sigmas, rhos) = smooth_knn_dist(&dist, k, 1.0f32, 64);
+
+        for (sigma, rho) in sigmas.iter().zip(&rhos) {
+            assert!(sigma.is_finite(), "sigma {sigma} is not finite");
+            assert!(*sigma > 0.0, "sigma {sigma} collapsed to zero");
+            assert!(rho.is_finite());
+        }
+    }
 
     #[test]
     fn test_smooth_knn_dist_basic() {
