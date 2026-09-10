@@ -1,3 +1,7 @@
+[![PyPI](https://img.shields.io/pypi/v/evoc-rs.svg)](https://pypi.org/project/evoc-rs/)
+[![Docs](https://img.shields.io/badge/docs-latest-blue.svg)](https://gregorlueg.github.io/evoc-rs/)
+[![CI](https://github.com/GregorLueg/evoc-rs/actions/workflows/python-test.yml/badge.svg)](https://github.com/GregorLueg/evoc-rs/actions/workflows/python-test.yml)
+
 # evoc-rs
 
 Python bindings for [`evoc-rs`](https://github.com/GregorLueg/evoc-rs): EVoC
