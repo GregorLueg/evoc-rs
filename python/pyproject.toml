@@ -20,7 +20,7 @@ classifiers = [
 [project.urls]
 Documentation = "https://gregorlueg.github.io/evoc-rs/"
 Repository = "https://github.com/GregorLueg/evoc-rs"
-Changelog = "https://github.com/GregorLueg/evoc-rs/blob/main/CHANGELOG.md"
+Changelog = "https://github.com/GregorLueg/evoc-rs/blob/main/python/CHANGELOG.md"
 
 [dependency-groups]
 dev = [

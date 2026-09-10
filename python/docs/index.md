@@ -40,6 +40,9 @@ the layers either side are often the interesting ones. See
 [Quickstart](quickstart.md) is the five-minute version.
 [kNN backends](backends.md) covers the seven graph builders and when the default
 is wrong. [GPU](gpu.md) covers `EVoCGpu` and when it pays off.
+[Changelog](https://github.com/GregorLueg/evoc-rs/blob/main/python/CHANGELOG.md)
+covers what changed in this package. It versions separately from the Rust crate,
+which keeps its own.
 
 ## Credit
 
