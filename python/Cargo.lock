@@ -61,9 +61,9 @@ checksum = "4b46cbb362ab8752921c97e041f5e366ee6297bd428a31275b9fcf1e380f7299"
 
 [[package]]
 name = "ann-search-rs"
-version = "0.8.0"
+version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75d654aaca955b4de484887fa6f9a21b813aea48c5fb69fc260cfcc93335fc29"
+checksum = "fcf6a510e2f0f970e8af958b37410f49a5e87342602a5183f17bb6724654f132"
 dependencies = [
  "cubecl",
  "cubecl-utils-rs",
@@ -1332,7 +1332,7 @@ dependencies = [
 
 [[package]]
 name = "evoc-rs"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "ann-search-rs",
  "approx",
@@ -1349,7 +1349,7 @@ dependencies = [
 
 [[package]]
 name = "evoc-rs-py"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cubecl",
  "evoc-rs",

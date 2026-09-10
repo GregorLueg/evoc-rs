@@ -1,5 +1,15 @@
 # News
 
+Changes to the `evoc-rs` crate. The Python package `evoc-rs` has its own
+changelog at [`python/CHANGELOG.md`](python/CHANGELOG.md).
+
+## 0.3.1
+
+**Features**
+
+- avx2 and avx512 properly enabled from `ann-search-rs = "0.8.3"` without any
+  compile flags.
+
 ## 0.3.0
 
 **Features**
@@ -47,13 +57,6 @@
   embedding with a large spatial scale silently lost a whole cluster layer. The
   contributions are summed in `f64` for the same reason: they span many orders
   of magnitude and `find_peaks` compares the sums exactly.
-
-**Python**
-
-- Python bindings under `python/`, built with PyO3 and maturin. A
-  scikit-learn shaped `EVoC` estimator over the CPU pipeline, plus `EVoCGpu`
-  for the GPU kNN path. Documentation at
-  <https://gregorlueg.github.io/evoc-rs/>.
 
 **Breaking changes**
 

@@ -6,6 +6,11 @@ is a thin scikit-learn shaped layer over it.
 
 **Documentation: <https://gregorlueg.github.io/evoc-rs/>**
 
+This package versions separately from the Rust crate. Changes here are in
+[`python/CHANGELOG.md`](https://github.com/GregorLueg/evoc-rs/blob/main/python/CHANGELOG.md);
+the crate's are in
+[`CHANGELOG.md`](https://github.com/GregorLueg/evoc-rs/blob/main/CHANGELOG.md).
+
 ## Install
 
 You can just install from PyPI.
