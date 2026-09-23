@@ -3,6 +3,12 @@
 Changes to the `evoc-rs` crate. The Python package `evoc-rs` has its own
 changelog at [`python/CHANGELOG.md`](python/CHANGELOG.md).
 
+## 0.4.0
+
+**Features**
+
+- `ann-search-rs` bumped to recent major version.
+
 ## 0.3.1
 
 **Features**
