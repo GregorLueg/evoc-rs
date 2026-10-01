@@ -3,6 +3,14 @@
 Changes to the `evoc-rs` Python package. The Rust crate it wraps, `evoc-rs`, has
 its own changelog at [`../CHANGELOG.md`](../CHANGELOG.md).
 
+## 0.1.3
+
+Requires `evoc-rs` 0.4.1.
+
+- Take in latest change from `ann-search-rs` version 0.9.1 with better k-means
+  and Accelerate framework enabled for Mac users.
+
+
 ## 0.1.2
 
 Requires `evoc-rs` 0.4.0.
