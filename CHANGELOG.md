@@ -3,6 +3,13 @@
 Changes to the `evoc-rs` crate. The Python package `evoc-rs` has its own
 changelog at [`python/CHANGELOG.md`](python/CHANGELOG.md).
 
+## 0.4.1
+
+**Features**
+
+- Take in latest change from `ann-search-rs` version 0.9.1 with better k-means
+  and Accelerate framework enabled for Mac users.
+
 ## 0.4.0
 
 **Features**
