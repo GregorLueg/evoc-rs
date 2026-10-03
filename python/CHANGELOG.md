@@ -3,6 +3,13 @@
 Changes to the `evoc-rs` Python package. The Rust crate it wraps, `evoc-rs`, has
 its own changelog at [`../CHANGELOG.md`](../CHANGELOG.md).
 
+## 0.1.4
+
+Requires `evoc-rs` 0.4.2.
+
+- Take in latest change from `ann-search-rs` version 0.9.3 with faster Annoy,
+  BallTree and NNDescent.
+
 ## 0.1.3
 
 Requires `evoc-rs` 0.4.1.
