@@ -3,9 +3,17 @@
 Changes to the `evoc-rs` Python package. The Rust crate it wraps, `evoc-rs`, has
 its own changelog at [`../CHANGELOG.md`](../CHANGELOG.md).
 
+## 0.1.6
+
+Requires the `evoc-rs` 0.4.4.
+
+**Features**
+
+- Pull in the changes from `evoc-rs` with improved k-means clustering.
+
 ## 0.1.5
 
-Requires the `evoc-rs` 0.4.2.
+Requires the `evoc-rs` 0.4.3.
 
 **Features**
 
