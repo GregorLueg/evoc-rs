@@ -3,6 +3,13 @@
 Changes to the `evoc-rs` crate. The Python package `evoc-rs` has its own
 changelog at [`python/CHANGELOG.md`](python/CHANGELOG.md).
 
+## 0.4.4
+
+**Features**
+
+- Take in the recent changes from `ann-search-rs` (version `"0.10.1"`) with
+  improved k-means clustering.
+
 ## 0.4.3
 
 **Features**
