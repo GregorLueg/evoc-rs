@@ -29,8 +29,8 @@ ndarray = ["dep:ndarray"]
 ann-search-rs = "0.10.1"
 ndarray = { version = ">=0.16, <0.18", optional = true }
 approx = "0.5.1"
-faer = "0.23.2"
-faer-traits = "0.23.2"
+faer = "0.24.4"
+faer-traits = "0.24.0"
 num-traits = "0.2.19"
 rand = "0.10.0"
 rayon = "1.11.0"
