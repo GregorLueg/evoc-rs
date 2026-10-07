@@ -38,7 +38,7 @@ evoc-rs = { path = ".." }
 # `cpu` is deliberately absent. CubeCL's software CPU runtime is test-only and
 # pulls a prebuilt LLVM needing glibc 2.33+, which no manylinux container has,
 # so a wheel carrying it cannot be built for Linux. Nothing here calls it.
-cubecl = { version = "0.10.0", features = ["wgpu"], optional = true }
+cubecl = { version = "0.11.0", features = ["wgpu"], optional = true }
 faer = "0.23.2"
 num-traits = "0.2"
 numpy = "0.29"
@@ -60,3 +60,7 @@ panic = "unwind"
 # useless.
 [profile.dev]
 opt-level = 2
+
+[patch.crates-io]
+cubecl-utils-rs = { path = "/private/tmp/claude-501/-Users-gregorlueg-repos-shared-bixverse-project/94daeefe-936b-457d-812d-6cb8506f4407/scratchpad/wt/cubecl-utils-rs" }
+ann-search-rs = { path = "/private/tmp/claude-501/-Users-gregorlueg-repos-shared-bixverse-project/94daeefe-936b-457d-812d-6cb8506f4407/scratchpad/wt/ann-search-rs" }

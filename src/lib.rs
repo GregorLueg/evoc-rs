@@ -29,7 +29,7 @@ use std::time::Instant;
 use cubecl_utils_rs::CubeclFloat;
 
 #[cfg(feature = "gpu")]
-use cubecl::prelude::*;
+use cubecl::Device;
 
 use crate::clustering::condensed_tree::*;
 use crate::clustering::linkage::mst_to_linkage_tree;
@@ -490,19 +490,18 @@ where
 /// persistence scores, and the kNN graph.
 #[allow(clippy::too_many_arguments)]
 #[cfg(feature = "gpu")]
-pub fn evoc_gpu<T, R>(
+pub fn evoc_gpu<T>(
     data: impl EvocMatrix<T>,
     ann_type: String,
     precomputed_knn: PreComputedKnn<T>,
     evoc_params: &EvocParams<T>,
     nn_params: &NearestNeighbourParamsGpuEvoc<T>,
-    device: R::Device,
+    device: Device,
     seed: usize,
     verbose: usize,
 ) -> Result<EvocResult<T>, EvocErrors>
 where
     T: EvocFloat + AnnSearchFloat + CubeclFloat,
-    R: Runtime,
 {
     let data_input = data.to_mat_input();
     let data = data_input.as_mat_ref();
@@ -541,7 +540,7 @@ where
                 println!("Running GPU nearest neighbour search using {}...", ann_type);
             }
             let start_knn = Instant::now();
-            let result = run_ann_search_gpu::<T, R>(
+            let result = run_ann_search_gpu::<T>(
                 data,
                 evoc_params.n_neighbours,
                 ann_type,
