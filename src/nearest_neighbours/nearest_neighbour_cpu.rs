@@ -11,7 +11,7 @@ use num_traits::Float;
 use rayon::prelude::*;
 use std::default::Default;
 
-use crate::nearest_neighbours::rescale_distances;
+use crate::nearest_neighbours::{rescale_distances, strip_self};
 use crate::prelude::*;
 
 ///////////////
@@ -49,6 +49,15 @@ pub enum AnnSearch {
     BallTree,
     /// Exhaustive
     Exhaustive,
+    /// Exhaustive on MLX (Apple Silicon, `mlx` feature)
+    #[cfg(mlx_available)]
+    ExhaustiveMlx,
+    /// IVF on MLX (Apple Silicon, `mlx` feature)
+    #[cfg(mlx_available)]
+    IvfMlx,
+    /// NNDescent on MLX (Apple Silicon, `mlx` feature)
+    #[cfg(mlx_available)]
+    NNDescentMlx,
 }
 
 /// Parameters for the nearest neighbour search
@@ -206,11 +215,55 @@ where
     }
 }
 
+/// Cast a matrix to `f32` for the MLX backends.
+///
+/// ### Params
+///
+/// * `data` - The MatRef to cast to `f32`.
+///
+/// ### Returns
+///
+/// `Mat` in f32
+#[cfg(mlx_available)]
+fn cast_matrix_to_fp32<T>(data: MatRef<T>) -> faer::Mat<f32>
+where
+    T: AnnSearchFloat,
+{
+    faer::Mat::<f32>::from_fn(data.nrows(), data.ncols(), |i, j| {
+        data[(i, j)].to_f32().unwrap()
+    })
+}
+
+/// Cast the f32 distances an MLX backend hands back up to `T`.
+///
+/// ### Params
+///
+/// * `knn` - `(knn_indices, optional distances)` from an MLX query
+///
+/// ### Returns
+///
+/// The same rows with the distances in `T`.
+#[cfg(mlx_available)]
+fn cast_mlx_knn<T>(knn: KnnOptionResult<f32>) -> KnnOptionResult<T>
+where
+    T: AnnSearchFloat,
+{
+    let (indices, dist) = knn?;
+    let dist = dist.map(|rows| {
+        rows.into_par_iter()
+            .map(|row| row.into_iter().map(|d| T::from(d).unwrap()).collect())
+            .collect()
+    });
+    Ok((indices, dist))
+}
+
 /// Parse the AnnSearch to use
 ///
 /// ### Params
 ///
-/// * `s` - String defining the ANN search to use
+/// * `s` - String defining the ANN search to use. `"exhaustive_mlx"`,
+///   `"ivf_mlx"` and `"nndescent_mlx"` are only recognised when the MLX
+///   backend is compiled in.
 ///
 /// ### Return
 ///
@@ -224,6 +277,12 @@ pub fn parse_ann_search(s: &str) -> Option<AnnSearch> {
         "ivf" => Some(AnnSearch::Ivf),
         "kmknn" => Some(AnnSearch::KmKnn),
         "nndescent" => Some(AnnSearch::NNDescent),
+        #[cfg(mlx_available)]
+        "exhaustive_mlx" => Some(AnnSearch::ExhaustiveMlx),
+        #[cfg(mlx_available)]
+        "ivf_mlx" => Some(AnnSearch::IvfMlx),
+        #[cfg(mlx_available)]
+        "nndescent_mlx" => Some(AnnSearch::NNDescentMlx),
         _ => None,
     }
 }
@@ -239,7 +298,9 @@ pub fn parse_ann_search(s: &str) -> Option<AnnSearch> {
 /// * `data` - The data with samples x features
 /// * `k` - Number of neighbours to return
 /// * `ann_type` - Which approximate nearest neighbour search to use. One of
-///   `"annoy"`, `"hnsw"`, `"balltree"` or `"nndesccent"`.
+///   `"annoy"`, `"balltree"`, `"exhaustive"`, `"hnsw"`, `"ivf"`, `"kmknn"` or
+///   `"nndescent"`. With the MLX backend compiled in also `"exhaustive_mlx"`,
+///   `"ivf_mlx"` and `"nndescent_mlx"`, which run in f32 whatever `T` is.
 /// * `params_nn` - The parameters for the approximate nearest neighbour search.
 /// * `seed` - Seed for reproducibility.
 /// * `verbose` - If `0` -> silent or `1` for normal verbosity, `2` for detailed
@@ -387,20 +448,103 @@ where
 
             query_kmknn_self(&index, k + 1, true, verbosity.normal_verbosity())?
         }
+        #[cfg(mlx_available)]
+        AnnSearch::ExhaustiveMlx => {
+            let data_fp32 = cast_matrix_to_fp32(data);
+            let index = build_exhaustive_index_mlx(data_fp32.as_ref(), &params_nn.dist_metric)?;
+
+            cast_mlx_knn(query_exhaustive_index_mlx_self(
+                &index,
+                k + 1,
+                true,
+                verbosity.detailed_verbosity(),
+            ))?
+        }
+        #[cfg(mlx_available)]
+        AnnSearch::IvfMlx => {
+            let data_fp32 = cast_matrix_to_fp32(data);
+            let index = build_ivf_index_mlx(
+                data_fp32.as_ref(),
+                params_nn.n_list,
+                None,
+                &params_nn.dist_metric,
+                seed,
+                verbosity.detailed_verbosity(),
+            )?;
+
+            cast_mlx_knn(query_ivf_index_mlx_self(
+                &index,
+                k + 1,
+                params_nn.n_probes,
+                None,
+                true,
+                verbosity.normal_verbosity(),
+            ))?
+        }
+        #[cfg(mlx_available)]
+        AnnSearch::NNDescentMlx => {
+            let data_fp32 = cast_matrix_to_fp32(data);
+            let graph_k = Some((k + 1).max(NNDESCENT_DEFAULT_DEGREE));
+            let delta = params_nn.delta.to_f32();
+
+            if params_nn.extract_knn {
+                // The raw graph build skips the CAGRA pruning the index needs
+                // for beam search, which extraction never runs.
+                let graph = build_knn_graph_mlx(
+                    data_fp32.as_ref(),
+                    &params_nn.dist_metric,
+                    graph_k,
+                    None,
+                    None,
+                    None,
+                    delta,
+                    None,
+                    None,
+                    seed,
+                    verbosity.detailed_verbosity(),
+                )?;
+                cast_mlx_knn(Ok(graph.extract_knn(Some(k + 1), true, true)))?
+            } else {
+                let index = build_nndescent_index_mlx(
+                    data_fp32.as_ref(),
+                    &params_nn.dist_metric,
+                    graph_k,
+                    None,
+                    None,
+                    None,
+                    delta,
+                    None,
+                    None,
+                    seed,
+                    verbosity.detailed_verbosity(),
+                )?;
+                cast_mlx_knn(query_nndescent_index_mlx_self(&index, k + 1, None, true))?
+            }
+        }
     };
 
     let knn_dist = knn_dist.unwrap();
 
-    // remove self (first element) from both indices and distances
-    let knn_indices: Vec<Vec<usize>> = knn_indices
-        .into_par_iter()
-        .map(|mut v| v.drain(1..).collect())
-        .collect();
+    // The f32 MLX backends can rank an exact duplicate ahead of the point
+    // itself, so self goes by index there. The CPU backends always lead with
+    // self and keep the positional drop.
+    #[cfg(mlx_available)]
+    let device_backend = matches!(
+        ann_search,
+        AnnSearch::ExhaustiveMlx | AnnSearch::IvfMlx | AnnSearch::NNDescentMlx
+    );
+    #[cfg(not(mlx_available))]
+    let device_backend = false;
 
-    let knn_dist: Vec<Vec<T>> = knn_dist
-        .into_par_iter()
-        .map(|mut v| v.drain(1..).collect())
-        .collect();
+    let (knn_indices, knn_dist) = if device_backend {
+        strip_self(knn_indices, knn_dist, k)
+    } else {
+        knn_indices
+            .into_par_iter()
+            .zip(knn_dist.into_par_iter())
+            .map(|(mut idx, mut dist)| (idx.drain(1..).collect(), dist.drain(1..).collect()))
+            .unzip()
+    };
 
     let knn_dist = rescale_distances(knn_dist, &params_nn.dist_metric);
 

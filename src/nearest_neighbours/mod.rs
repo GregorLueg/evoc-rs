@@ -3,8 +3,6 @@
 pub mod nearest_neighbour_cpu;
 #[cfg(feature = "gpu")]
 pub mod nearest_neighbour_gpu;
-#[cfg(mlx_available)]
-pub mod nearest_neighbour_mlx;
 
 use num_traits::Float;
 use rayon::prelude::*;
@@ -15,7 +13,7 @@ use rayon::prelude::*;
 
 /// Drop self from self-query results and cap every row at `k`.
 ///
-/// The device backends answer a self-query with `k + 1` rows that usually,
+/// The f32 device backends answer a self-query with `k + 1` rows that usually,
 /// but not always, lead with the point itself. Filtering by index rather than
 /// position covers both cases.
 ///
@@ -28,7 +26,6 @@ use rayon::prelude::*;
 /// ### Returns
 ///
 /// `(knn_indices, knn_dist)` excluding self, at most `k` per row.
-#[cfg(any(feature = "gpu", mlx_available))]
 pub(crate) fn strip_self<T>(
     knn_indices: Vec<Vec<usize>>,
     knn_dist: Vec<Vec<T>>,

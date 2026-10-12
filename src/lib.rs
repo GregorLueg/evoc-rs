@@ -45,11 +45,9 @@ use crate::prelude::*;
 #[cfg(feature = "gpu")]
 use crate::nearest_neighbours::nearest_neighbour_gpu::*;
 
-#[cfg(mlx_available)]
-use crate::nearest_neighbours::nearest_neighbour_mlx::*;
-
-/// Whether [`evoc_mlx`] was compiled in: the `mlx` feature is on and mlx-c was
-/// found at build time.
+/// Whether the MLX kNN backends (`"exhaustive_mlx"`, `"ivf_mlx"`,
+/// `"nndescent_mlx"` in [`evoc`]) were compiled in: the `mlx` feature is on and
+/// mlx-c was found at build time.
 pub const MLX_AVAILABLE: bool = cfg!(mlx_available);
 
 /// Version of this crate.
@@ -602,90 +600,6 @@ where
             )?;
             if verbosity.normal_verbosity() {
                 println!("GPU kNN search done in {:.2?}.", start_knn.elapsed());
-            }
-            result
-        }
-    };
-
-    Ok(evoc_from_knn(
-        data,
-        knn_indices,
-        knn_dist,
-        evoc_params,
-        seed,
-        verbose,
-        start_all,
-    ))
-}
-
-/////////////////
-// MLX version //
-/////////////////
-
-/// Run EVoC clustering with MLX-accelerated kNN search (Apple Silicon).
-///
-/// Identical to [`evoc`] except the kNN graph is constructed on the Apple GPU
-/// through `ann-search-rs`'s MLX backends. Only compiled when
-/// [`MLX_AVAILABLE`] is `true`. `f32` only, as the MLX backends are.
-///
-/// ### Params
-///
-/// * `data` — input data as samples x features. Accepts a faer matrix, an
-///   ndarray 2-D array (with the `ndarray` feature) or a row-major
-///   `(&[f32], n_samples, n_features)` tuple. See [`EvocMatrix`].
-/// * `ann_type` — MLX ANN backend: `"exhaustive_mlx"`, `"ivf_mlx"` or
-///   `"nndescent_mlx"`.
-/// * `precomputed_knn` — pre-built `(indices, distances)` pair; pass `None`
-///   to build the graph with MLX.
-/// * `evoc_params` — clustering hyperparameters; see [`EvocParams`].
-/// * `nn_params` — MLX nearest-neighbour search parameters, see
-///   [`NearestNeighbourParamsMlxEvoc`].
-/// * `seed` — random seed for reproducibility.
-/// * `verbose` - If `0` -> silent or `1` for normal verbosity, `2` for detailed
-///   verbosity.
-///
-/// ### Returns
-///
-/// An [`EvocResult`] containing cluster layers, membership strengths,
-/// persistence scores, and the kNN graph.
-#[cfg(mlx_available)]
-pub fn evoc_mlx(
-    data: impl EvocMatrix<f32>,
-    ann_type: String,
-    precomputed_knn: PreComputedKnn<f32>,
-    evoc_params: &EvocParams<f32>,
-    nn_params: &NearestNeighbourParamsMlxEvoc,
-    seed: usize,
-    verbose: usize,
-) -> Result<EvocResult<f32>, EvocErrors> {
-    let data_input = data.to_mat_input();
-    let data = data_input.as_mat_ref();
-    let start_all = Instant::now();
-    let verbosity = parse_verbosity_level(verbose);
-
-    // 1. kNN graph (MLX)
-    let (knn_indices, knn_dist) = match precomputed_knn {
-        Some((indices, distances)) => {
-            if verbosity.normal_verbosity() {
-                println!("Using precomputed kNN graph...");
-            }
-            (indices, distances)
-        }
-        None => {
-            if verbosity.normal_verbosity() {
-                println!("Running MLX nearest neighbour search using {}...", ann_type);
-            }
-            let start_knn = Instant::now();
-            let result = run_ann_search_mlx(
-                data,
-                evoc_params.n_neighbours,
-                ann_type,
-                nn_params,
-                seed,
-                verbose,
-            )?;
-            if verbosity.normal_verbosity() {
-                println!("MLX kNN search done in {:.2?}.", start_knn.elapsed());
             }
             result
         }

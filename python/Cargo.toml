@@ -33,6 +33,13 @@ default = ["gpu"]
 ## `--no-default-features` for a CPU-only wheel.
 gpu = ["evoc-rs/gpu", "dep:cubecl"]
 
+## Off by default, Apple Silicon only: the MLX kNN backends (`exhaustive_mlx`,
+## `ivf_mlx`, `nndescent_mlx` on `EVoC`). Links mlx-c dynamically, so the result
+## only imports on a Mac with `brew install mlx-c`; that is why no published
+## wheel carries it. Without the library the core warns at build time and
+## leaves MLX out; `mlx_available()` then reports `False`.
+mlx = ["evoc-rs/mlx"]
+
 [dependencies]
 evoc-rs = { path = ".." }
 # `cpu` is deliberately absent. CubeCL's software CPU runtime is test-only and

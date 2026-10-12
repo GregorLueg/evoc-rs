@@ -16,10 +16,11 @@ path = "src/lib.rs"
 [features]
 ## Enable GPU-accelerated approximate nearest neighbour search for the kNN stage
 gpu = ["ann-search-rs/gpu", "cubecl", "cubecl-utils-rs"]
-## Experimental, Apple Silicon only: MLX kNN backends via mlx-c (`evoc_mlx`).
+## Experimental, Apple Silicon only: MLX kNN backends via mlx-c, as the
+## `*_mlx` `ann_type`s of `evoc`.
 ## Needs `brew install mlx-c` (or MLX_C_PREFIX pointing at an install).
 ## Without the library the build warns and the MLX code is left out; check
-## `MLX_AVAILABLE`. f32 only.
+## `MLX_AVAILABLE`. The kNN search runs in f32 whatever the input type.
 mlx = ["ann-search-rs/mlx"]
 ## Accept `ndarray` 2-D arrays wherever a faer matrix is accepted.
 ##

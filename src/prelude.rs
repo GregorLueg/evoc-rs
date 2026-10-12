@@ -15,9 +15,6 @@ pub use crate::utils::traits::EvocFloat;
 #[cfg(feature = "gpu")]
 pub use crate::nearest_neighbours::nearest_neighbour_gpu::NearestNeighbourParamsGpuEvoc;
 
-#[cfg(mlx_available)]
-pub use crate::nearest_neighbours::nearest_neighbour_mlx::NearestNeighbourParamsMlxEvoc;
-
 ///////////
 // Enums //
 ///////////

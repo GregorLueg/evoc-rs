@@ -27,6 +27,7 @@ from ._evoc_rs import (
     __core_version__,
     __version__,
     gpu_available,
+    mlx_available,
     num_threads,
     set_num_threads,
 )
@@ -40,6 +41,7 @@ __all__ = [
     "__core_version__",
     "__version__",
     "gpu_available",
+    "mlx_available",
     "num_threads",
     "set_num_threads",
 ]

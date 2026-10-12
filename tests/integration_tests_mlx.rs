@@ -8,12 +8,14 @@ use commons::*;
 use ann_search_rs::synthetic::generate_clustered_data;
 
 use evoc_rs::nearest_neighbours::nearest_neighbour_cpu::run_ann_search;
-use evoc_rs::nearest_neighbours::nearest_neighbour_mlx::run_ann_search_mlx;
 use evoc_rs::prelude::*;
-use evoc_rs::{EvocParams, evoc_mlx};
+use evoc_rs::{EvocParams, evoc};
 
 /// Same fixture as the GPU accuracy tests.
 const ACC_FIXTURE: (usize, usize, usize, u64) = (600, 32, 4, 1);
+
+/// The MLX backends, as `ann_type` strings.
+const MLX_BACKENDS: [&str; 3] = ["exhaustive_mlx", "ivf_mlx", "nndescent_mlx"];
 
 /// Every MLX backend should recover the clusters end to end.
 #[test]
@@ -22,14 +24,14 @@ fn mlx_integration_01_clusters_all_backends() {
     let (mat, gt) = generate_clustered_data::<f32>(n, dim, nc, seed);
 
     let params = EvocParams::<f32>::default();
-    let nn_params = NearestNeighbourParamsMlxEvoc {
+    let nn_params = NearestNeighbourParamsEvoc::<f32> {
         n_list: Some(5),
         n_probes: Some(5),
-        ..NearestNeighbourParamsMlxEvoc::default()
+        ..NearestNeighbourParamsEvoc::default()
     };
 
-    for ann_type in ["exhaustive_mlx", "ivf_mlx", "nndescent_mlx"] {
-        let result = evoc_mlx(
+    for ann_type in MLX_BACKENDS {
+        let result = evoc(
             mat.as_ref(),
             ann_type.to_string(),
             None,
@@ -51,29 +53,38 @@ fn mlx_integration_01_clusters_all_backends() {
     }
 }
 
-/// Every backend returns exactly `k` neighbours per point, none of them self.
+/// Every backend returns exactly `k` neighbours per point, none of them self,
+/// including the beam-search path of NNDescent and an `f64` input.
 #[test]
 fn mlx_integration_02_knn_shape_no_self() {
     let (n, dim, nc, seed) = ACC_FIXTURE;
-    let (mat, _) = generate_clustered_data::<f32>(n, dim, nc, seed);
+    let (mat, _) = generate_clustered_data::<f64>(n, dim, nc, seed);
     let k = 15;
 
-    for ann_type in ["exhaustive_mlx", "ivf_mlx", "nndescent_mlx"] {
-        let (idx, dist) = run_ann_search_mlx(
-            mat.as_ref(),
-            k,
-            ann_type.to_string(),
-            &NearestNeighbourParamsMlxEvoc::default(),
-            42,
-            0,
-        )
-        .unwrap();
+    let extract = NearestNeighbourParamsEvoc::<f64>::default();
+    let beam = NearestNeighbourParamsEvoc::<f64> {
+        extract_knn: false,
+        ..NearestNeighbourParamsEvoc::default()
+    };
+
+    for (ann_type, nn_params) in MLX_BACKENDS
+        .iter()
+        .map(|a| (*a, &extract))
+        .chain(std::iter::once(("nndescent_mlx", &beam)))
+    {
+        let (idx, dist) =
+            run_ann_search(mat.as_ref(), k, ann_type.to_string(), nn_params, 42, 0).unwrap();
 
         assert_eq!(idx.len(), n);
         for i in 0..n {
             assert_eq!(idx[i].len(), k, "{}: row {} has wrong length", ann_type, i);
             assert_eq!(dist[i].len(), k);
-            assert!(!idx[i].contains(&i), "{}: row {} contains self", ann_type, i);
+            assert!(
+                !idx[i].contains(&i),
+                "{}: row {} contains self",
+                ann_type,
+                i
+            );
         }
     }
 }
@@ -85,21 +96,15 @@ fn mlx_integration_03_exhaustive_matches_cpu() {
     let (n, dim, nc, seed) = ACC_FIXTURE;
     let (mat, _) = generate_clustered_data::<f32>(n, dim, nc, seed);
     let k = 15;
+    let nn_params = NearestNeighbourParamsEvoc::<f32>::default();
 
-    let (idx_cpu, dist_cpu) = run_ann_search(
-        mat.as_ref(),
-        k,
-        "exhaustive".to_string(),
-        &NearestNeighbourParamsEvoc::<f32>::default(),
-        42,
-        0,
-    )
-    .unwrap();
-    let (idx_mlx, dist_mlx) = run_ann_search_mlx(
+    let (idx_cpu, dist_cpu) =
+        run_ann_search(mat.as_ref(), k, "exhaustive".to_string(), &nn_params, 42, 0).unwrap();
+    let (idx_mlx, dist_mlx) = run_ann_search(
         mat.as_ref(),
         k,
         "exhaustive_mlx".to_string(),
-        &NearestNeighbourParamsMlxEvoc::default(),
+        &nn_params,
         42,
         0,
     )
