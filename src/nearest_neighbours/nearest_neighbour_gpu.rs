@@ -10,9 +10,8 @@ use ann_search_rs::{
 use cubecl::Device;
 use cubecl_utils_rs::CubeclFloat;
 use faer::MatRef;
-use rayon::prelude::*;
 
-use crate::nearest_neighbours::rescale_distances;
+use crate::nearest_neighbours::{rescale_distances, strip_self};
 use crate::prelude::*;
 
 ///////////////
@@ -331,21 +330,7 @@ where
         }
     };
 
-    let knn_dist = knn_dist.unwrap();
-
-    // remove self from both indices and distances in a single pass
-    let (knn_indices, knn_dist): (Vec<Vec<usize>>, Vec<Vec<T>>) = knn_indices_raw
-        .into_par_iter()
-        .zip(knn_dist.into_par_iter())
-        .enumerate()
-        .map(|(i, (idx, dist))| {
-            idx.into_iter()
-                .zip(dist)
-                .filter(|(j, _)| *j != i)
-                .take(k)
-                .unzip()
-        })
-        .unzip();
+    let (knn_indices, knn_dist) = strip_self(knn_indices_raw, knn_dist.unwrap(), k);
 
     let knn_dist = rescale_distances(knn_dist, &params_nn.dist_metric);
 
