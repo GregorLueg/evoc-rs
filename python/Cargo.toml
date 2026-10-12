@@ -60,7 +60,3 @@ panic = "unwind"
 # useless.
 [profile.dev]
 opt-level = 2
-
-[patch.crates-io]
-cubecl-utils-rs = { path = "/private/tmp/claude-501/-Users-gregorlueg-repos-shared-bixverse-project/94daeefe-936b-457d-812d-6cb8506f4407/scratchpad/wt/cubecl-utils-rs" }
-ann-search-rs = { path = "/private/tmp/claude-501/-Users-gregorlueg-repos-shared-bixverse-project/94daeefe-936b-457d-812d-6cb8506f4407/scratchpad/wt/ann-search-rs" }
