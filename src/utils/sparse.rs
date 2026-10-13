@@ -479,7 +479,7 @@ impl<T: EvocFloat> Csr<T> {
             if norm > T::zero() {
                 let inv = T::one() / norm;
                 for idx in start..end {
-                    new_data[idx] = new_data[idx] * inv;
+                    new_data[idx] *= inv;
                 }
             }
         }
