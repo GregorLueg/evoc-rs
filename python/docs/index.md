@@ -38,8 +38,9 @@ the layers either side are often the interesting ones. See
 ## Where to go next
 
 [Quickstart](quickstart.md) is the five-minute version.
-[kNN backends](backends.md) covers the seven graph builders and when the default
-is wrong. [GPU](gpu.md) covers `EVoCGpu` and when it pays off.
+[kNN backends](backends.md) covers the seven graph builders, when the default
+is wrong, and the experimental MLX ones for Apple Silicon. [GPU](gpu.md) covers
+`EVoCGpu` and when it pays off.
 [Changelog](https://github.com/GregorLueg/evoc-rs/blob/main/python/CHANGELOG.md)
 covers what changed in this package. It versions separately from the Rust crate,
 which keeps its own.

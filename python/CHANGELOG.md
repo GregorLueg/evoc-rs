@@ -3,6 +3,19 @@
 Changes to the `evoc-rs` Python package. The Rust crate it wraps, `evoc-rs`, has
 its own changelog at [`../CHANGELOG.md`](../CHANGELOG.md).
 
+## 0.2.0
+
+Requires `evoc-rs` 0.5.0.
+
+**Features**
+
+- Pull in `evoc-rs` 0.5.0 with `cubecl` 0.11 and `ann-search-rs` 0.11.
+- New `mlx` build feature, off by default and not in the published wheel. On
+  Apple Silicon with mlx-c installed, `maturin develop --release --features
+  mlx` adds `exhaustive_mlx`, `ivf_mlx` and `nndescent_mlx` as
+  `ann_algorithm` options on `EVoC`.
+- New `mlx_available()`, fixed at build time.
+
 ## 0.1.6
 
 Requires the `evoc-rs` 0.4.4.

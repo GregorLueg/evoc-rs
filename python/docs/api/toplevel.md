@@ -7,6 +7,7 @@ under [Estimators](estimator.md).
     options:
       members:
         - gpu_available
+        - mlx_available
         - num_threads
         - set_num_threads
         - EvocError

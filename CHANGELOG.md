@@ -3,6 +3,23 @@
 Changes to the `evoc-rs` crate. The Python package `evoc-rs` has its own
 changelog at [`python/CHANGELOG.md`](python/CHANGELOG.md).
 
+## 0.5.0
+
+**Breaking changes**
+
+- `cubecl` 0.11: `evoc_gpu` drops the runtime type parameter and takes a
+  `cubecl::Device`. `evoc_gpu::<f32, WgpuRuntime>(..., device, ...)` becomes
+  `evoc_gpu::<f32>(..., WgpuDevice::default().into(), ...)`.
+- `faer` 0.24, matching `ann-search-rs`.
+
+**Features**
+
+- Take in `ann-search-rs` 0.11.0 and `cubecl-utils-rs` 0.2.0.
+- New experimental `mlx` feature for Apple Silicon. Adds `"exhaustive_mlx"`,
+  `"ivf_mlx"` and `"nndescent_mlx"` as `ann_type`s on `evoc`, running the kNN
+  search on the Apple GPU through mlx-c. Needs `brew install mlx-c`; without
+  it the build warns and leaves MLX out. `MLX_AVAILABLE` says which you got.
+
 ## 0.4.4
 
 **Features**

@@ -14,7 +14,8 @@ expensive stage. `ann_algorithm` picks how.
 | `balltree` | Metric tree of nested hyperspheres. |
 
 All seven come from [`ann-search-rs`](https://github.com/GregorLueg/ann-search-rs),
-where they are documented properly and benchmarked.
+where they are documented properly and benchmarked. An `mlx` build on Apple
+Silicon adds three more, see [MLX on Apple Silicon](#mlx-on-apple-silicon).
 
 ## Which to use
 
@@ -42,7 +43,8 @@ alongside the clustering parameters. Only the ones matching your
 | `hnsw` | `m`, `ef_construction`, `ef_search` |
 | `nndescent` | `diversify_prob`, `delta`, `ef_budget`, `extract_knn` |
 | `balltree` | `bt_budget` |
-| `ivf` | `n_list`, `n_probes` |
+| `ivf`, `ivf_mlx` | `n_list`, `n_probes` |
+| `nndescent_mlx` | `delta`, `extract_knn` |
 
 ### The NN-Descent fast track
 
@@ -56,6 +58,34 @@ The graph degree is widened to cover `k` when it is set, since extraction
 cannot return more neighbours than the graph holds. `None` on any optional knob
 means the crate picks. `n_list` defaults to `sqrt(n)`, `n_probes` to
 `sqrt(n_list)`, and the NN-Descent query budget is derived from `n_neighbours`.
+
+## MLX on Apple Silicon
+
+Experimental. A wheel built with the `mlx` feature on a Mac with mlx-c
+installed takes three more `ann_algorithm` values on the plain `EVoC`:
+
+| Backend | Notes |
+| --- | --- |
+| `exhaustive_mlx` | Exact, on the Apple GPU. |
+| `ivf_mlx` | Inverted file over k-means cells, on the Apple GPU. |
+| `nndescent_mlx` | NN-Descent on the Apple GPU. With `extract_knn` it hands back the raw graph; without, it builds a CAGRA index and beam-searches it. |
+
+```bash
+brew install mlx-c
+maturin develop --release --features mlx
+```
+
+```python
+evoc_rs.mlx_available()  # True only in an mlx build that found mlx-c
+model = evoc_rs.EVoC(ann_algorithm="nndescent_mlx").fit(X)
+```
+
+The search runs in float32 whatever you pass in, so float64 input loses
+precision in the kNN stage only; the rest of the pipeline keeps your dtype. No
+published wheel carries this, since it links mlx-c dynamically and would only
+import on a Mac that has it. In a build without it, an `*_mlx` name raises with
+a pointer to the build flag rather than the generic "unknown backend" message.
+How it stacks up against `EVoCGpu` on the same Mac is not benchmarked yet.
 
 ## Metric
 
