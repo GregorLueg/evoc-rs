@@ -13,6 +13,7 @@ __pycache__/
 *.py[cod]
 
 # Jupyter
+python/notebooks/
 .ipynb_checkpoints/
 .virtual_documents/
 .jupyter_ystore.db
