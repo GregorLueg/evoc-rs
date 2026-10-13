@@ -510,7 +510,7 @@ fn label_prop_init_inner<T: EvocFloat>(
         }
         let mean = sum * inv_n;
         for i in 0..n {
-            result[(i, j)] = result[(i, j)] - mean;
+            result[(i, j)] -= mean
         }
     }
 

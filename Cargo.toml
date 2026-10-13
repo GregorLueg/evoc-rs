@@ -1,6 +1,6 @@
 [package]
 name = "evoc-rs"
-version = "0.4.4"
+version = "0.5.0"
 edition = "2024"
 authors = ["Gregor Lueg <gregorlueg@me.com>"]
 license = "MIT AND BSD-2-Clause"
@@ -16,6 +16,12 @@ path = "src/lib.rs"
 [features]
 ## Enable GPU-accelerated approximate nearest neighbour search for the kNN stage
 gpu = ["ann-search-rs/gpu", "cubecl", "cubecl-utils-rs"]
+## Experimental, Apple Silicon only: MLX kNN backends via mlx-c, as the
+## `*_mlx` `ann_type`s of `evoc`.
+## Needs `brew install mlx-c` (or MLX_C_PREFIX pointing at an install).
+## Without the library the build warns and the MLX code is left out; check
+## `MLX_AVAILABLE`. The kNN search runs in f32 whatever the input type.
+mlx = ["ann-search-rs/mlx"]
 ## Accept `ndarray` 2-D arrays wherever a faer matrix is accepted.
 ##
 ## This makes `ndarray` a public dependency, so a downstream crate pinned to a
@@ -26,18 +32,18 @@ gpu = ["ann-search-rs/gpu", "cubecl", "cubecl-utils-rs"]
 ndarray = ["dep:ndarray"]
 
 [dependencies]
-ann-search-rs = "0.10.1"
+ann-search-rs = "0.11.0"
 ndarray = { version = ">=0.16, <0.18", optional = true }
 approx = "0.5.1"
-faer = "0.23.2"
-faer-traits = "0.23.2"
+faer = "0.24.4"
+faer-traits = "0.24.0"
 num-traits = "0.2.19"
 rand = "0.10.0"
 rayon = "1.11.0"
 rustc-hash = "2.1.2"
-cubecl = { version = "0.10.0", optional = true }
+cubecl = { version = "0.11.0", optional = true }
 thiserror = "2.0.18"
-cubecl-utils-rs = {version = "0.1.0", optional = true }
+cubecl-utils-rs = { version = "0.2.0", optional = true }
 
 [dev-dependencies]
-ann-search-rs = { version = "0.10.0", features = ["synthetic"] }
+ann-search-rs = { version = "0.11.0", features = ["synthetic"] }

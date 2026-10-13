@@ -10,6 +10,8 @@ from __future__ import annotations
 import numpy as np
 from beartype import beartype
 
+from . import _evoc_rs
+
 ###########
 # Globals #
 ###########
@@ -20,10 +22,15 @@ _NATIVE: tuple[np.dtype, ...] = (np.dtype(np.float32), np.dtype(np.float64))
 #: Metrics the kNN backends accept.
 METRICS: frozenset[str] = frozenset({"euclidean", "cosine"})
 
-#: CPU ANN backends `run_ann_search` dispatches on.
+#: Whether the MLX names below are accepted: the extension was built with the
+#: `mlx` feature and the core found mlx-c. Fixed at build time.
+_MLX: bool = _evoc_rs.mlx_available()
+
+#: CPU ANN backends `run_ann_search` dispatches on. The `*_mlx` ones run on the
+#: Apple GPU through MLX and only exist in an `mlx` build.
 CPU_BACKENDS: frozenset[str] = frozenset(
     {"nndescent", "hnsw", "annoy", "ivf", "kmknn", "balltree", "exhaustive"}
-)
+) | (frozenset({"exhaustive_mlx", "ivf_mlx", "nndescent_mlx"}) if _MLX else frozenset())
 
 #: GPU ANN backends `run_ann_search_gpu` dispatches on.
 GPU_BACKENDS: frozenset[str] = frozenset({"exhaustive_gpu", "ivf_gpu", "nndescent_gpu"})
@@ -110,8 +117,15 @@ def check_choice(value: str, allowed: frozenset[str], name: str) -> str:
         The value unchanged.
 
     Raises:
-        ValueError: If the value is not in `allowed`.
+        ValueError: If the value is not in `allowed`, with a pointer to the
+            build flag for an `*_mlx` name in a build without MLX.
     """
+    if value not in allowed and value.endswith("_mlx"):
+        raise ValueError(
+            f"{name} {value!r} needs the MLX backend, which this build lacks: "
+            "`maturin develop --release --features mlx` on Apple Silicon with "
+            "mlx-c installed (`brew install mlx-c`)"
+        )
     if value not in allowed:
         options = ", ".join(sorted(allowed))
         raise ValueError(f"{name} must be one of {options}, got {value!r}")

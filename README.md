@@ -17,7 +17,8 @@ This crate is a port of the original Python implementation by Leland McInnes at
 the [Tutte Institute](https://github.com/TutteInstitute/evoc), extended with
 support for multiple approximate nearest neighbour backends via
 [ann-search-rs](https://crates.io/crates/ann-search-rs), including optional
-GPU-accelerated kNN via [cubecl](https://crates.io/crates/cubecl).
+GPU-accelerated kNN via [cubecl](https://crates.io/crates/cubecl) and, on
+Apple Silicon, via [MLX](https://github.com/ml-explore/mlx-c).
 
 ## How it works
 
@@ -50,6 +51,18 @@ To enable GPU-accelerated kNN search:
 [dependencies]
 evoc-rs = { version = "*", features = ["gpu"] }
 ```
+
+On Apple Silicon you can also have the MLX kNN backends (experimental):
+
+```toml
+[dependencies]
+evoc-rs = { version = "*", features = ["mlx"] }
+```
+
+That one needs mlx-c on the machine: `brew install mlx-c`. If it lives
+somewhere other than `/opt/homebrew`, point `MLX_C_PREFIX` at the install
+prefix. No mlx-c, no MLX: the build warns and carries on without it, and
+`evoc_rs::MLX_AVAILABLE` tells you which one you got.
 
 ## Usage
 
@@ -101,20 +114,19 @@ persistence analysis remain on the CPU.
 ```rust
 use evoc_rs::{evoc_gpu, EvocParams};
 use evoc_rs::prelude::*;
-use cubecl::wgpu::{WgpuDevice, WgpuRuntime};
+use cubecl::wgpu::WgpuDevice;
 
-// data is a faer MatRef<f32> (f32 only — see note below)
+// data is a faer MatRef<f32> (f32 only, see note below)
 let params = EvocParams::<f32>::default();
 let nn_params = NearestNeighbourParamsGpuEvoc::<f32>::default();
-let device = WgpuDevice::default();
 
-let result = evoc_gpu::<f32, WgpuRuntime>(
+let result = evoc_gpu::<f32>(
     data.as_ref(),
     "ivf_gpu".to_string(),   // "exhaustive_gpu", "ivf_gpu", or "nndescent_gpu"
     None,
     &params,
     &nn_params,
-    device,
+    WgpuDevice::default().into(),
     42,
     1,
 );
@@ -128,8 +140,41 @@ language) has no `f64`, and `f64` throughput on consumer GPUs is typically
 CPU path. GPU results are also not bit-reproducible across runs due to
 non-deterministic parallel reduction order; structural quality is consistent.
 
-To use CUDA instead of wgpu, swap `WgpuRuntime`/`WgpuDevice` for
-`CudaRuntime`/`CudaDevice` from `cubecl::cuda`.
+The device is a `cubecl::Device`, so CUDA is just a different conversion:
+pass `CudaDevice::default().into()` (from `cubecl::cuda`) instead.
+
+### MLX kNN on Apple Silicon (requires `mlx` feature)
+
+On a Mac, the `mlx` feature adds three more backends to the plain `evoc` call:
+`"exhaustive_mlx"`, `"ivf_mlx"` and `"nndescent_mlx"`. They run the kNN search
+on the Apple GPU through mlx-c; everything after it stays on the CPU, same as
+the `gpu` path. No device to pass, no separate entry point.
+
+```rust
+use evoc_rs::{evoc, EvocParams, MLX_AVAILABLE};
+use evoc_rs::prelude::*;
+
+assert!(MLX_AVAILABLE, "built without mlx-c");
+
+let params = EvocParams::<f32>::default();
+let nn_params = NearestNeighbourParamsEvoc::<f32>::default();
+
+let result = evoc(
+    data.as_ref(),
+    "nndescent_mlx".to_string(),
+    None,
+    &params,
+    &nn_params,
+    42,
+    1,
+);
+```
+
+The search itself runs in `f32` whatever `T` is, so `f64` input loses
+precision in the kNN stage only. `NearestNeighbourParamsEvoc` carries over:
+`n_list` and `n_probes` drive `ivf_mlx`, `delta` and `extract_knn` drive
+`nndescent_mlx`. Still experimental; benchmarks against the wgpu path are
+outstanding.
 
 ## Credits
 

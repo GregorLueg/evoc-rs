@@ -14,6 +14,9 @@ cargo test --release --all-features -- --no-capture
 # Single test
 cargo test --release --no-default-features integration_01_mst_two_clusters
 
+# MLX build/test (Apple Silicon, needs `brew install mlx-c`)
+cargo test --release --features mlx --test integration_tests_mlx
+
 # Feature-gated code
 cargo build --features gpu
 cargo doc --no-deps --all-features --open
@@ -26,13 +29,13 @@ Linux GPU CI installs Vulkan (`libvulkan1`, `mesa-vulkan-drivers`) and sets `WGP
 Library crate (`src/lib.rs`) exposing two top-level entry points that share the same 6-stage pipeline:
 
 - `evoc(...)` — CPU pipeline
-- `evoc_gpu::<T, R>(...)` — GPU kNN, CPU everything else (only under `gpu` feature)
+- `evoc_gpu::<T>(..., device: cubecl::Device, ...)` — GPU kNN, CPU everything else (only under `gpu` feature)
 
-Both take a `faer::MatRef<T>` of shape `(n_points, n_features)` and return `Result<EvocResult<T>, EvocErrors>`.
+Both take anything implementing `EvocMatrix<T>` (faer, ndarray, or a row-major `(&[T], n, d)` tuple) of shape `(n_points, n_features)` and return `Result<EvocResult<T>, EvocErrors>`. After stage 1 both hand off to the private `evoc_from_knn`, so stages 2 to 6 exist once.
 
 **Pipeline stages** (in order, matched between CPU and GPU paths):
 
-1. kNN graph — `nearest_neighbours::{cpu, gpu}` dispatches to backends in `ann-search-rs` (CPU: `nndescent`, `hnsw`, `annoy`, `ivf`, `kmknn`, `balltree`, `exhaustive`; GPU: `exhaustive_gpu`, `ivf_gpu`, `nndescent_gpu`). Can be short-circuited with `precomputed_knn`.
+1. kNN graph — `nearest_neighbours::{cpu, gpu}` dispatches to backends in `ann-search-rs` (CPU: `nndescent`, `hnsw`, `annoy`, `ivf`, `kmknn`, `balltree`, `exhaustive`, plus `exhaustive_mlx`, `ivf_mlx`, `nndescent_mlx` when MLX is compiled in; GPU: `exhaustive_gpu`, `ivf_gpu`, `nndescent_gpu`). Can be short-circuited with `precomputed_knn`.
 2. Fuzzy simplicial set — `graph::fuzzy_graph` smooths kNN into a weighted symmetric graph (COO), then `coo_to_adjacency_list`.
 3. Label propagation init — `graph::label_prop::label_propagation_init` gives the embedding a starting layout.
 4. Node embedding — `graph::embedding::evoc_embedding` runs the EVoC gradient (modified UMAP repulsion tuned by `noise_level`) with Adam.
@@ -54,6 +57,8 @@ The `gpu` feature enables `ann-search-rs/gpu` + the `cubecl` dependency. Everyth
 
 When adding GPU-touching code, mirror this pattern.
 
+The `mlx` feature enables `ann-search-rs/mlx`, but the gate is `#[cfg(mlx_available)]`, not the feature. ann-search-rs links mlx-c and exports `DEP_MLXC_AVAILABLE=1` only when it found the library; `build.rs` turns that into `cfg(mlx_available)`. Without mlx-c the feature is on but the MLX code is left out, and `MLX_AVAILABLE` reports `false`. The MLX backends are extra `AnnSearch` variants in `nearest_neighbour_cpu.rs` (cast to `f32` in, distances cast back to `T`), not a separate entry point. `tests/integration_tests_mlx.rs` is guarded with `#![cfg(mlx_available)]`.
+
 ### Prelude
 
 `src/prelude.rs` re-exports the trait `EvocFloat`, `EvocErrors`, `EvocEmbeddingParams`, `NearestNeighbourParamsEvoc`, `CoordinateList`, the `Verbosity` enum + `parse_verbosity_level`, and the type aliases `EvocKnnResults<T>` / `PreComputedKnn<T>`. Consumers use `use evoc_rs::prelude::*;` — keep new public types in scope by adding them here.
@@ -68,7 +73,7 @@ Numeric API: `0 = Quiet`, `1 = Normal`, `2 = Detailed`. `parse_verbosity_level` 
 - `#![warn(missing_docs)]` at the crate root — public items need doc comments.
 - `#![allow(clippy::needless_range_loop)]` is applied at both the crate root and in tests — indexed loops are used deliberately for readability in numerical kernels; keep them when hot.
 - Errors flow through `EvocErrors` (`thiserror`), which currently just wraps `ann_search_rs::errors::AnnSearchErrors`.
-- Version bumps happen in `Cargo.toml`, README install snippets, and `docs/news.md` together.
+- Version bumps happen in `Cargo.toml`, README install snippets, and `CHANGELOG.md` together. The Python package (`python/`) versions independently, with its own `python/CHANGELOG.md`.
 
 ## Upstream reference
 

@@ -58,7 +58,9 @@ class EVoC(BaseEstimator):
             count as redundant and the coarser one is dropped.
         max_layers: Cap on the layers returned.
         ann_algorithm: kNN backend. One of nndescent, hnsw, annoy, ivf, kmknn,
-            balltree, exhaustive.
+            balltree, exhaustive. An `mlx` build on Apple Silicon also takes
+            exhaustive_mlx, ivf_mlx and nndescent_mlx, which run the kNN
+            stage on the Apple GPU in float32; see `mlx_available()`.
         metric: Distance metric, euclidean or cosine.
         n_tree: Annoy trees.
         search_budget: Annoy candidates per query. None uses the crate default.

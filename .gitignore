@@ -10,6 +10,13 @@ python/site
 __pycache__/
 .pytest_cache/
 .ruff_cache/
+*.py[cod]
+
+# Jupyter
+python/notebooks/
+.ipynb_checkpoints/
+.virtual_documents/
+.jupyter_ystore.db
 
 # Apple
 .DS_Store

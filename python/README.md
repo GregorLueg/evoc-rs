@@ -106,6 +106,29 @@ if evoc_rs.gpu_available():
 `gpu_available()` answers both "was this wheel built with GPU support" and "is
 there an adapter here" at once. The published wheel carries it.
 
+## MLX on Apple Silicon
+
+Experimental, and not in the published wheel: build from source on a Mac with
+mlx-c installed.
+
+```bash
+brew install mlx-c
+cd python && maturin develop --release --features mlx
+```
+
+That adds `exhaustive_mlx`, `ivf_mlx` and `nndescent_mlx` as `ann_algorithm`
+options on the plain `EVoC`. The kNN stage runs on the Apple GPU through MLX in
+float32, everything after it stays on the CPU.
+
+```python
+if evoc_rs.mlx_available():
+    model = evoc_rs.EVoC(n_neighbours=15, ann_algorithm="nndescent_mlx").fit(X)
+```
+
+`mlx_available()` is fixed at build time. Without mlx-c the build warns and
+leaves MLX out, and asking for an `*_mlx` backend raises with a pointer to the
+build flag.
+
 ## Threads
 
 ```python

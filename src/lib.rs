@@ -23,13 +23,14 @@ use ann_search_rs::cpu::hnsw::{HnswIndex, HnswState};
 use ann_search_rs::cpu::nndescent::{NNDescent, NNDescentQuery};
 use ann_search_rs::prelude::AnnSearchFloat;
 use ann_search_rs::utils::nndescent_utils::ApplySortedUpdates;
+use faer::MatRef;
 use std::time::Instant;
 
 #[cfg(feature = "gpu")]
 use cubecl_utils_rs::CubeclFloat;
 
 #[cfg(feature = "gpu")]
-use cubecl::prelude::*;
+use cubecl::Device;
 
 use crate::clustering::condensed_tree::*;
 use crate::clustering::linkage::mst_to_linkage_tree;
@@ -43,6 +44,11 @@ use crate::prelude::*;
 
 #[cfg(feature = "gpu")]
 use crate::nearest_neighbours::nearest_neighbour_gpu::*;
+
+/// Whether the MLX kNN backends (`"exhaustive_mlx"`, `"ivf_mlx"`,
+/// `"nndescent_mlx"` in [`evoc`]) were compiled in: the `mlx` feature is on and
+/// mlx-c was found at build time.
+pub const MLX_AVAILABLE: bool = cfg!(mlx_available);
 
 /// Version of this crate.
 ///
@@ -256,6 +262,50 @@ where
         }
     };
 
+    Ok(evoc_from_knn(
+        data,
+        knn_indices,
+        knn_dist,
+        evoc_params,
+        seed,
+        verbose,
+        start_all,
+    ))
+}
+
+/// Run stages 2 to 6 of the pipeline on a finished kNN graph.
+///
+/// Shared by every entry point, which differ only in how the kNN graph is
+/// built.
+///
+/// ### Params
+///
+/// * `data` - The input data as samples x features.
+/// * `knn_indices` - Neighbour indices per point, self excluded.
+/// * `knn_dist` - Neighbour distances per point, self excluded.
+/// * `evoc_params` - Clustering hyperparameters; see [`EvocParams`].
+/// * `seed` - Random seed for reproducibility.
+/// * `verbose` - If `0` -> silent or `1` for normal verbosity, `2` for detailed
+///   verbosity.
+/// * `start_all` - Start of the whole run, for the total timing.
+///
+/// ### Returns
+///
+/// The [`EvocResult`], carrying the kNN graph it was given.
+fn evoc_from_knn<T>(
+    data: MatRef<T>,
+    knn_indices: Vec<Vec<usize>>,
+    knn_dist: Vec<Vec<T>>,
+    evoc_params: &EvocParams<T>,
+    seed: usize,
+    verbose: usize,
+    start_all: Instant,
+) -> EvocResult<T>
+where
+    T: EvocFloat,
+{
+    let verbosity = parse_verbosity_level(verbose);
+
     // 2. Fuzzy simplicial set
     if verbosity.normal_verbosity() {
         println!("Constructing fuzzy simplicial set...");
@@ -273,7 +323,6 @@ where
     }
 
     // 3. Embedding dimensionality
-    // original code did 4 to 15 -> went up one for SIMD
     let dim = evoc_params
         .embedding_dim
         .unwrap_or_else(|| (evoc_params.n_neighbours / 4).clamp(4, 16));
@@ -353,13 +402,13 @@ where
         println!("EVoC total: {:.2?}.", start_all.elapsed());
     }
 
-    Ok(EvocResult {
+    EvocResult {
         cluster_layers,
         membership_strengths,
         persistence_scores,
         nn_indices: knn_indices,
         nn_distances: knn_dist,
-    })
+    }
 }
 
 /// Binary-searches over `min_cluster_size` to find approximately `target_k`
@@ -490,19 +539,18 @@ where
 /// persistence scores, and the kNN graph.
 #[allow(clippy::too_many_arguments)]
 #[cfg(feature = "gpu")]
-pub fn evoc_gpu<T, R>(
+pub fn evoc_gpu<T>(
     data: impl EvocMatrix<T>,
     ann_type: String,
     precomputed_knn: PreComputedKnn<T>,
     evoc_params: &EvocParams<T>,
     nn_params: &NearestNeighbourParamsGpuEvoc<T>,
-    device: R::Device,
+    device: Device,
     seed: usize,
     verbose: usize,
 ) -> Result<EvocResult<T>, EvocErrors>
 where
     T: EvocFloat + AnnSearchFloat + CubeclFloat,
-    R: Runtime,
 {
     let data_input = data.to_mat_input();
     let data = data_input.as_mat_ref();
@@ -541,7 +589,7 @@ where
                 println!("Running GPU nearest neighbour search using {}...", ann_type);
             }
             let start_knn = Instant::now();
-            let result = run_ann_search_gpu::<T, R>(
+            let result = run_ann_search_gpu::<T>(
                 data,
                 evoc_params.n_neighbours,
                 ann_type,
@@ -557,112 +605,13 @@ where
         }
     };
 
-    // 2. Fuzzy simplicial set
-    if verbosity.normal_verbosity() {
-        println!("Constructing fuzzy simplicial set...");
-    }
-    let start_graph = Instant::now();
-    let effective_k = evoc_params.neighbour_scale * T::from(evoc_params.n_neighbours).unwrap();
-    let graph =
-        build_fuzzy_simplicial_set(&knn_indices, &knn_dist, effective_k, evoc_params.symmetrise);
-    let adj = coo_to_adjacency_list(&graph);
-    if verbosity.normal_verbosity() {
-        println!(
-            "... fuzzy simplicial set done in {:.2?}.",
-            start_graph.elapsed()
-        );
-    }
-
-    // 3. Embedding dimensionality
-    let dim = evoc_params
-        .embedding_dim
-        .unwrap_or_else(|| (evoc_params.n_neighbours / 4).clamp(4, 16));
-
-    // 4. Label propagation initialisation
-    let start_init = Instant::now();
-    let n = data.nrows();
-    let d = data.ncols();
-    let data_vecs: Vec<Vec<T>> = (0..n)
-        .map(|i| (0..d).map(|j| data[(i, j)]).collect())
-        .collect();
-
-    if verbosity.normal_verbosity() {
-        println!("Computing label propagation initialisation...");
-    }
-    let initial_embedding = crate::graph::label_prop::label_propagation_init(
-        &graph,
-        dim,
-        Some(&data_vecs),
-        seed as u64,
+    Ok(evoc_from_knn(
+        data,
+        knn_indices,
+        knn_dist,
+        evoc_params,
+        seed,
         verbose,
-    );
-    if verbosity.normal_verbosity() {
-        println!(" ... label prop init done in {:.2?}.", start_init.elapsed());
-    }
-
-    // 5. Node embedding
-    if verbosity.normal_verbosity() {
-        println!(
-            "Computing {}-d node embedding ({} epochs)...",
-            dim, evoc_params.n_epochs
-        );
-    }
-    let start_embed = Instant::now();
-    let embed_params = EvocEmbeddingParams {
-        n_epochs: evoc_params.n_epochs,
-        noise_level: evoc_params.noise_level,
-        initial_alpha: T::from(0.1).unwrap(),
-        ..EvocEmbeddingParams::default()
-    };
-
-    let embedding = evoc_embedding(
-        &adj,
-        dim,
-        &embed_params,
-        Some(&initial_embedding),
-        seed as u64,
-        verbose,
-    );
-    if verbosity.normal_verbosity() {
-        println!(" ... embedding done in {:.2?}.", start_embed.elapsed());
-    }
-
-    // 6. Clustering
-    if verbosity.normal_verbosity() {
-        println!("Running density-based clustering...");
-    }
-    let start_cluster = Instant::now();
-
-    let (cluster_layers, membership_strengths, persistence_scores) =
-        if let Some(target_k) = evoc_params.approx_n_clusters {
-            let (labels, strengths) =
-                search_for_n_clusters(&embedding, evoc_params.min_samples, target_k);
-            (vec![labels], vec![strengths], vec![0.0])
-        } else {
-            build_cluster_layers(
-                &embedding,
-                evoc_params.min_samples,
-                evoc_params.base_min_cluster_size,
-                evoc_params.min_similarity_threshold,
-                evoc_params.max_layers,
-            )
-        };
-
-    if verbosity.normal_verbosity() {
-        let n_layers = cluster_layers.len();
-        println!(
-            "Clustering done in {:.2?}: {} layer(s).",
-            start_cluster.elapsed(),
-            n_layers,
-        );
-        println!("EVoC (GPU) total: {:.2?}.", start_all.elapsed());
-    }
-
-    Ok(EvocResult {
-        cluster_layers,
-        membership_strengths,
-        persistence_scores,
-        nn_indices: knn_indices,
-        nn_distances: knn_dist,
-    })
+        start_all,
+    ))
 }

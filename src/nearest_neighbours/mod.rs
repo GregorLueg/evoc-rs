@@ -7,6 +7,47 @@ pub mod nearest_neighbour_gpu;
 use num_traits::Float;
 use rayon::prelude::*;
 
+/////////////////
+// Self filter //
+/////////////////
+
+/// Drop self from self-query results and cap every row at `k`.
+///
+/// The f32 device backends answer a self-query with `k + 1` rows that usually,
+/// but not always, lead with the point itself. Filtering by index rather than
+/// position covers both cases.
+///
+/// ### Params
+///
+/// * `knn_indices` - Per-point neighbour indices, self possibly included.
+/// * `knn_dist` - Matching per-point distances.
+/// * `k` - Neighbours to keep per point.
+///
+/// ### Returns
+///
+/// `(knn_indices, knn_dist)` excluding self, at most `k` per row.
+pub(crate) fn strip_self<T>(
+    knn_indices: Vec<Vec<usize>>,
+    knn_dist: Vec<Vec<T>>,
+    k: usize,
+) -> (Vec<Vec<usize>>, Vec<Vec<T>>)
+where
+    T: Send,
+{
+    knn_indices
+        .into_par_iter()
+        .zip(knn_dist.into_par_iter())
+        .enumerate()
+        .map(|(i, (idx, dist))| {
+            idx.into_iter()
+                .zip(dist)
+                .filter(|(j, _)| *j != i)
+                .take(k)
+                .unzip()
+        })
+        .unzip()
+}
+
 /////////////////////
 // Distance rescue //
 /////////////////////

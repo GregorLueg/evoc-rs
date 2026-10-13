@@ -113,7 +113,7 @@ where
                 } else {
                     lo = mid;
                     if hi == T::max_value() {
-                        mid = mid * two;
+                        mid *= two;
                     } else {
                         mid = (lo + hi) / two;
                     }

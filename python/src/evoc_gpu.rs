@@ -5,10 +5,10 @@
 //! only, because WGSL has no f64 and consumer GPUs cripple its throughput
 //! anyway.
 //!
-//! The runtime is pinned rather than generic: a `R: Runtime` type parameter
-//! cannot cross into Python, and wgpu is the only backend the wheel ships.
+//! The device is pinned to wgpu, the only backend the wheel ships.
 
-use cubecl::wgpu::{WgpuDevice, WgpuRuntime};
+use cubecl::wgpu::WgpuDevice;
+use cubecl::Device;
 use evoc_rs::evoc_gpu;
 use evoc_rs::prelude::*;
 use numpy::PyReadonlyArray2;
@@ -20,16 +20,13 @@ use crate::error::EvocErr;
 use crate::params::EvocArgs;
 use crate::pool;
 
-/// The runtime every GPU call here uses.
-pub(crate) type Rt = WgpuRuntime;
-
 /// The device every GPU call here uses.
 ///
 /// ### Returns
 ///
 /// wgpu's best available adapter.
-pub(crate) fn default_device() -> WgpuDevice {
-    WgpuDevice::default()
+pub(crate) fn default_device() -> Device {
+    WgpuDevice::default().into()
 }
 
 /// Every knob of `NearestNeighbourParamsGpuEvoc`, as plain scalars.
@@ -197,7 +194,7 @@ pub(crate) fn run_evoc_gpu<'py>(
     let result = py
         .detach(|| {
             pool::run(|| {
-                evoc_gpu::<f32, Rt>(
+                evoc_gpu::<f32>(
                     (data, n, dim),
                     ann_type,
                     precomputed,

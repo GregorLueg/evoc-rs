@@ -73,6 +73,12 @@ model = evoc_rs.EVoCGpu().fit(X.astype(np.float64))
 model.membership_strengths_.dtype  # float32
 ```
 
+## MLX instead
+
+On Apple Silicon there is a second route to the GPU: the experimental MLX
+backends, which ride on the plain `EVoC` rather than `EVoCGpu`. See
+[MLX on Apple Silicon](backends.md#mlx-on-apple-silicon).
+
 ## CPU-only wheels
 
 Building from source with `--no-default-features` gives a wheel without any of

@@ -5,7 +5,7 @@ mod commons;
 use commons::*;
 
 use ann_search_rs::synthetic::generate_clustered_data;
-use cubecl::wgpu::{WgpuDevice, WgpuRuntime};
+use cubecl::wgpu::WgpuDevice;
 use faer::Mat;
 
 use evoc_rs::nearest_neighbours::nearest_neighbour_gpu::run_ann_search_gpu;
@@ -35,13 +35,13 @@ fn gpu_integration_01_clusters_exhaustive() {
     let nn_params = NearestNeighbourParamsGpuEvoc::<f32>::default();
     let device = WgpuDevice::default();
 
-    let result = evoc_gpu::<f32, WgpuRuntime>(
+    let result = evoc_gpu::<f32>(
         mat.as_ref(),
         "exhaustive_gpu".to_string(),
         None,
         &params,
         &nn_params,
-        device,
+        device.clone().into(),
         42,
         0,
     )
@@ -72,13 +72,13 @@ fn gpu_integration_02_clusters_ivf() {
 
     let device = WgpuDevice::default();
 
-    let result = evoc_gpu::<f32, WgpuRuntime>(
+    let result = evoc_gpu::<f32>(
         mat.as_ref(),
         "ivf_gpu".to_string(),
         None,
         &params,
         &nn_params,
-        device,
+        device.clone().into(),
         42,
         0,
     )
@@ -104,13 +104,13 @@ fn gpu_integration_03_all_backends_dispatch() {
 
     for ann_type in ["exhaustive_gpu", "ivf_gpu", "nndescent_gpu"] {
         let device = WgpuDevice::default();
-        let result = evoc_gpu::<f32, WgpuRuntime>(
+        let result = evoc_gpu::<f32>(
             mat.as_ref(),
             ann_type.to_string(),
             None,
             &params,
             &nn_params,
-            device,
+            device.clone().into(),
             42,
             0,
         )
@@ -151,13 +151,13 @@ fn gpu_integration_04_structural_agreement_with_cpu() {
 
     let nn_gpu = NearestNeighbourParamsGpuEvoc::<f32>::default();
     let device = WgpuDevice::default();
-    let gpu = evoc_gpu::<f32, WgpuRuntime>(
+    let gpu = evoc_gpu::<f32>(
         mat.as_ref(),
         "exhaustive_gpu".to_string(),
         None,
         &params,
         &nn_gpu,
-        device,
+        device.clone().into(),
         42,
         0,
     )
@@ -189,12 +189,12 @@ fn gpu_integration_05_precomputed_knn() {
 
     let nn_params = NearestNeighbourParamsGpuEvoc::<f32>::default();
     let device = WgpuDevice::default();
-    let (knn_indices, knn_dist) = run_ann_search_gpu::<f32, WgpuRuntime>(
+    let (knn_indices, knn_dist) = run_ann_search_gpu::<f32>(
         mat.as_ref(),
         k,
         "exhaustive_gpu".to_string(),
         &nn_params,
-        device,
+        device.clone().into(),
         42,
         0,
     )
@@ -206,13 +206,13 @@ fn gpu_integration_05_precomputed_knn() {
     };
 
     let device2 = WgpuDevice::default();
-    let result = evoc_gpu::<f32, WgpuRuntime>(
+    let result = evoc_gpu::<f32>(
         mat.as_ref(),
         "exhaustive_gpu".to_string(),
         Some((knn_indices, knn_dist)),
         &params,
         &nn_params,
-        device2,
+        device2.clone().into(),
         42,
         0,
     )
@@ -237,13 +237,13 @@ fn gpu_integration_06_approx_n_clusters() {
     let nn_params = NearestNeighbourParamsGpuEvoc::<f32>::default();
     let device = WgpuDevice::default();
 
-    let result = evoc_gpu::<f32, WgpuRuntime>(
+    let result = evoc_gpu::<f32>(
         mat.as_ref(),
         "exhaustive_gpu".to_string(),
         None,
         &params,
         &nn_params,
-        device,
+        device.clone().into(),
         42,
         0,
     )
@@ -270,13 +270,13 @@ fn gpu_integration_07_knn_no_self() {
     let nn_params = NearestNeighbourParamsGpuEvoc::<f32>::default();
     let device = WgpuDevice::default();
 
-    let result = evoc_gpu::<f32, WgpuRuntime>(
+    let result = evoc_gpu::<f32>(
         mat.as_ref(),
         "exhaustive_gpu".to_string(),
         None,
         &params,
         &nn_params,
-        device,
+        device.clone().into(),
         42,
         0,
     )
