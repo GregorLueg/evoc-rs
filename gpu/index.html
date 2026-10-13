@@ -474,6 +474,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mlx-instead" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MLX instead
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#cpu-only-wheels" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -678,6 +689,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mlx-instead" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MLX instead
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#cpu-only-wheels" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -784,6 +806,10 @@ library that narrows on your behalf.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">model</span> <span class="o">=</span> <span class="n">evoc_rs</span><span class="o">.</span><span class="n">EVoCGpu</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">model</span><span class="o">.</span><span class="n">membership_strengths_</span><span class="o">.</span><span class="n">dtype</span>  <span class="c1"># float32</span>
 </code></pre></div>
+<h2 id="mlx-instead">MLX instead<a class="headerlink" href="#mlx-instead" title="Permanent link">&para;</a></h2>
+<p>On Apple Silicon there is a second route to the GPU: the experimental MLX
+backends, which ride on the plain <code>EVoC</code> rather than <code>EVoCGpu</code>. See
+<a href="../backends/#mlx-on-apple-silicon">MLX on Apple Silicon</a>.</p>
 <h2 id="cpu-only-wheels">CPU-only wheels<a class="headerlink" href="#cpu-only-wheels" title="Permanent link">&para;</a></h2>
 <p>Building from source with <code>--no-default-features</code> gives a wheel without any of
 this. <code>gpu_available()</code> returns <code>False</code>, <code>EVoCGpu</code> is not exported, and

@@ -584,6 +584,34 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#evoc_rs.mlx_available" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;mlx_available
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" mlx_available">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#evoc_rs.mlx_available--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returns
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#evoc_rs.num_threads" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -854,6 +882,34 @@
     <span class="md-ellipsis">
       
         Note
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#evoc_rs.mlx_available" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;mlx_available
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" mlx_available">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#evoc_rs.mlx_available--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returns
       
     </span>
   </a>
@@ -1173,6 +1229,33 @@ the probe catches it. That is sound here because the release profile is
 pinned to <code>panic = "unwind"</code>, which pyo3 requires anyway. The panic hook is
 silenced for the duration, otherwise merely asking the question prints a
 backtrace to stderr.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="evoc_rs.mlx_available" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">mlx_available</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-builtin"><code>builtin</code></small>
+  </span>
+
+<a href="#evoc_rs.mlx_available" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">mlx_available</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n"><span title="bool">bool</span></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Whether the MLX kNN backends are compiled in.</p>
+<h6 id="evoc_rs.mlx_available--returns">Returns<a class="headerlink" href="#evoc_rs.mlx_available--returns" title="Permanent link">&para;</a></h6>
+<p><code>True</code> when this build has the <code>mlx</code> feature and the core found mlx-c at
+build time. Fixed at build time; there is no adapter to probe.</p>
 
 
     </div>

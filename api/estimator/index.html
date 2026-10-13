@@ -1062,7 +1062,9 @@ count as redundant and the coarser one is dropped.</p>
             <td>
               <div class="doc-md-description">
                 <p>kNN backend. One of nndescent, hnsw, annoy, ivf, kmknn,
-balltree, exhaustive.</p>
+balltree, exhaustive. An <code>mlx</code> build on Apple Silicon also takes
+exhaustive_mlx, ivf_mlx and nndescent_mlx, which run the kNN
+stage on the Apple GPU in float32; see <code>mlx_available()</code>.</p>
               </div>
             </td>
             <td>
