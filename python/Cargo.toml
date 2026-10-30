@@ -67,3 +67,6 @@ panic = "unwind"
 # useless.
 [profile.dev]
 opt-level = 2
+
+[patch.crates-io]
+ann-search-rs = { git = "https://github.com/GregorLueg/ann-search-rs", branch = "chore-clean-up" }

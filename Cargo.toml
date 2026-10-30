@@ -32,7 +32,7 @@ mlx = ["ann-search-rs/mlx"]
 ndarray = ["dep:ndarray"]
 
 [dependencies]
-ann-search-rs = "0.11.0"
+ann-search-rs = "0.12.0"
 ndarray = { version = ">=0.16, <0.18", optional = true }
 approx = "0.5.1"
 faer = "0.24.4"
@@ -46,4 +46,7 @@ thiserror = "2.0.18"
 cubecl-utils-rs = { version = "0.2.0", optional = true }
 
 [dev-dependencies]
-ann-search-rs = { version = "0.11.0", features = ["synthetic"] }
+ann-search-rs = { version = "0.12.0", features = ["synthetic"] }
+
+[patch.crates-io]
+ann-search-rs = { git = "https://github.com/GregorLueg/ann-search-rs", branch = "chore-clean-up" }
