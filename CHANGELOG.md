@@ -3,6 +3,29 @@
 Changes to the `evoc-rs` crate. The Python package `evoc-rs` has its own
 changelog at [`python/CHANGELOG.md`](python/CHANGELOG.md).
 
+## 0.6.0
+
+**Breaking changes**
+
+- `nndescent`, `nndescent_gpu` and `nndescent_mlx` build the kNN graph and
+  return it directly. The index and beam search paths are gone, and with them
+  `diversify_prob`, `ef_budget` and `extract_knn` on
+  `NearestNeighbourParamsEvoc`, and `k`, `beam_width`, `max_beam_iters`,
+  `n_entry_points` and `extract_knn` on `NearestNeighbourParamsGpuEvoc`.
+- `NearestNeighbourParamsGpuEvoc::k_build` is now `build_k` and defaults to
+  `1.5 * n_neighbours` (was `2 * n_neighbours`). New `max_iters` and
+  `refine_knn`.
+- `Verbosity` is now the `ann-search-rs` enum, re-exported from the prelude.
+  `parse_verbosity_level` stays.
+
+**Features**
+
+- Take in `ann-search-rs` 0.12.0.
+- `verbose` reaches the kNN backends: `1` prints build and query progress, `2`
+  adds the timed build stages.
+- `nndescent_gpu` builds in balanced batches when the data does not fit a
+  single device buffer.
+
 ## 0.5.0
 
 **Breaking changes**

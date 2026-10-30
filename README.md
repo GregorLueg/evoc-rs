@@ -172,8 +172,7 @@ let result = evoc(
 
 The search itself runs in `f32` whatever `T` is, so `f64` input loses
 precision in the kNN stage only. `NearestNeighbourParamsEvoc` carries over:
-`n_list` and `n_probes` drive `ivf_mlx`, `delta` and `extract_knn` drive
-`nndescent_mlx`. Still experimental; benchmarks against the wgpu path are
+`n_list` and `n_probes` drive `ivf_mlx`, `delta` drives `nndescent_mlx`. Still experimental; benchmarks against the wgpu path are
 outstanding.
 
 ## Credits

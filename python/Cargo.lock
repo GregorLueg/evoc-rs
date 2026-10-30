@@ -1783,7 +1783,7 @@ dependencies = [
 
 [[package]]
 name = "evoc-rs"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "ann-search-rs",
  "approx",
@@ -1800,7 +1800,7 @@ dependencies = [
 
 [[package]]
 name = "evoc-rs-py"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "cubecl",
  "evoc-rs",
