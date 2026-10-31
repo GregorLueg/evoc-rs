@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -31,10 +31,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -782,23 +782,16 @@ before you commit to it.</p>
 </tr>
 <tr>
 <td><code>nndescent_gpu</code></td>
-<td>CAGRA-style graph, built and queried on device.</td>
+<td>NN-Descent on device, handing back the kNN graph directly.</td>
 </tr>
 </tbody>
 </table>
-<p>Knobs are <code>n_list</code> and <code>n_probes</code> for <code>ivf_gpu</code>, and <code>k</code>, <code>k_build</code>, <code>n_tree</code>,
-<code>delta</code>, <code>rho</code>, <code>beam_width</code>, <code>max_beam_iters</code>, <code>n_entry_points</code> and
-<code>extract_knn</code> for <code>nndescent_gpu</code>.</p>
-<p><code>extract_knn</code> is on by default and hands back the CAGRA graph the build already
-produced rather than beam-searching it, which skips every beam parameter above.
-If you want to make sure your graph is as good as possible, use
-<code>extract_knn = False</code>.</p>
-<p>The two CAGRA degrees are worth knowing about. <code>k</code> is the graph degree after
-pruning and <code>k_build</code> the degree before it, and both are independent of the
-<code>n_neighbours</code> you are querying for. Left at the crate defaults they sit below
-<code>n_neighbours</code> whenever you ask for more than 30 neighbours, and the beam search
-then walks a graph too small to answer the query well. <code>None</code> on either
-backfills from <code>n_neighbours</code>, so leave them alone unless you have a reason.</p>
+<p>Knobs are <code>n_list</code> and <code>n_probes</code> for <code>ivf_gpu</code>, and <code>build_k</code>, <code>max_iters</code>,
+<code>n_tree</code>, <code>delta</code>, <code>rho</code> and <code>refine_knn</code> for <code>nndescent_gpu</code>.</p>
+<p><code>nndescent_gpu</code> builds the graph with <code>n_neighbours</code> per point and returns it,
+with no CAGRA pruning and no beam search on top. <code>build_k</code> is the working degree
+during the descent and defaults to <code>1.5 * n_neighbours</code>. Datasets too big for a
+single device buffer are built in balanced batches automatically.</p>
 <h2 id="float32-only">float32 only<a class="headerlink" href="#float32-only" title="Permanent link">&para;</a></h2>
 <p>WGSL has no <code>f64</code>, and consumer GPUs cripple its throughput anyway. <code>EVoCGpu</code>
 casts float64 input down rather than refusing it, which is the one place in this
@@ -873,10 +866,10 @@ constructing one anyway raises an <code>ImportError</code> naming the flag.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "navigation.tracking", "content.code.copy", "content.action.edit", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "navigation.tracking", "content.code.copy", "content.action.edit", "toc.follow"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>

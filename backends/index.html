@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -31,10 +31,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -426,10 +426,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#the-nn-descent-fast-track" class="md-nav__link">
+  <a href="#nn-descent-builds-the-graph-nothing-else" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The NN-Descent fast track
+        NN-Descent builds the graph, nothing else
       
     </span>
   </a>
@@ -674,10 +674,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#the-nn-descent-fast-track" class="md-nav__link">
+  <a href="#nn-descent-builds-the-graph-nothing-else" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The NN-Descent fast track
+        NN-Descent builds the graph, nothing else
       
     </span>
   </a>
@@ -823,7 +823,7 @@ alongside the clustering parameters. Only the ones matching your
 </tr>
 <tr>
 <td><code>nndescent</code></td>
-<td><code>diversify_prob</code>, <code>delta</code>, <code>ef_budget</code>, <code>extract_knn</code></td>
+<td><code>delta</code></td>
 </tr>
 <tr>
 <td><code>balltree</code></td>
@@ -835,20 +835,16 @@ alongside the clustering parameters. Only the ones matching your
 </tr>
 <tr>
 <td><code>nndescent_mlx</code></td>
-<td><code>delta</code>, <code>extract_knn</code></td>
+<td><code>delta</code></td>
 </tr>
 </tbody>
 </table>
-<h3 id="the-nn-descent-fast-track">The NN-Descent fast track<a class="headerlink" href="#the-nn-descent-fast-track" title="Permanent link">&para;</a></h3>
-<p><code>extract_knn</code> is on by default and worth leaving on. NN-Descent's whole job is
-to build a kNN graph, so querying it for a self-kNN graph afterwards re-does
-work that has already been done. Extraction hands back the graph directly and
-skips the beam search, along with every beam parameter (<code>ef_budget</code> on the CPU,
-<code>beam_width</code> and friends on the GPU).</p>
-<p>The graph degree is widened to cover <code>k</code> when it is set, since extraction
-cannot return more neighbours than the graph holds. <code>None</code> on any optional knob
-means the crate picks. <code>n_list</code> defaults to <code>sqrt(n)</code>, <code>n_probes</code> to
-<code>sqrt(n_list)</code>, and the NN-Descent query budget is derived from <code>n_neighbours</code>.</p>
+<h3 id="nn-descent-builds-the-graph-nothing-else">NN-Descent builds the graph, nothing else<a class="headerlink" href="#nn-descent-builds-the-graph-nothing-else" title="Permanent link">&para;</a></h3>
+<p>NN-Descent's whole job is to build a kNN graph, and a kNN graph is exactly what
+EVoC wants. So the <code>nndescent</code> backends build the graph with <code>n_neighbours</code> per
+point and hand it straight back. No index, no beam search, no query knobs.</p>
+<p><code>None</code> on any optional knob means the crate picks. <code>n_list</code> defaults to
+<code>sqrt(n)</code> and <code>n_probes</code> to <code>sqrt(n_list)</code>.</p>
 <h2 id="mlx-on-apple-silicon">MLX on Apple Silicon<a class="headerlink" href="#mlx-on-apple-silicon" title="Permanent link">&para;</a></h2>
 <p>Experimental. A wheel built with the <code>mlx</code> feature on a Mac with mlx-c
 installed takes three more <code>ann_algorithm</code> values on the plain <code>EVoC</code>:</p>
@@ -870,7 +866,7 @@ installed takes three more <code>ann_algorithm</code> values on the plain <code>
 </tr>
 <tr>
 <td><code>nndescent_mlx</code></td>
-<td>NN-Descent on the Apple GPU. With <code>extract_knn</code> it hands back the raw graph; without, it builds a CAGRA index and beam-searches it.</td>
+<td>NN-Descent on the Apple GPU, handing back the kNN graph directly.</td>
 </tr>
 </tbody>
 </table>
@@ -965,10 +961,10 @@ limited to these seven:</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "navigation.tracking", "content.code.copy", "content.action.edit", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "navigation.tracking", "content.code.copy", "content.action.edit", "toc.follow"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>
