@@ -67,13 +67,7 @@ class EVoC(BaseEstimator):
         m: HNSW connections per layer.
         ef_construction: HNSW construction budget.
         ef_search: HNSW search budget.
-        diversify_prob: NN-Descent diversification probability.
         delta: NN-Descent convergence threshold.
-        ef_budget: NN-Descent beam budget when querying. Ignored when
-            extract_knn is True, since no search runs.
-        extract_knn: For nndescent, return the graph the descent already built
-            rather than beam-searching it. On by default: a self-kNN query
-            re-does the work the descent just did.
         bt_budget: BallTree search budget, as a fraction of the sample count.
         n_list: IVF cells. None uses sqrt(n).
         n_probes: IVF cells probed per query. None uses sqrt(n_list).
@@ -129,10 +123,7 @@ class EVoC(BaseEstimator):
         m: int = 16,
         ef_construction: int = 200,
         ef_search: int = 100,
-        diversify_prob: float = 1.0,
         delta: float = 0.001,
-        ef_budget: int | None = None,
-        extract_knn: bool = True,
         bt_budget: float = 0.05,
         n_list: int | None = None,
         n_probes: int | None = None,
@@ -157,10 +148,7 @@ class EVoC(BaseEstimator):
         self.m = m
         self.ef_construction = ef_construction
         self.ef_search = ef_search
-        self.diversify_prob = diversify_prob
         self.delta = delta
-        self.ef_budget = ef_budget
-        self.extract_knn = extract_knn
         self.bt_budget = bt_budget
         self.n_list = n_list
         self.n_probes = n_probes
@@ -208,10 +196,7 @@ class EVoC(BaseEstimator):
             m=self.m,
             ef_construction=self.ef_construction,
             ef_search=self.ef_search,
-            diversify_prob=self.diversify_prob,
             delta=self.delta,
-            ef_budget=self.ef_budget,
-            extract_knn=self.extract_knn,
             bt_budget=self.bt_budget,
             n_list=self.n_list,
             n_probes=self.n_probes,
@@ -311,18 +296,12 @@ class EVoCGpu(EVoC):
 
     Args:
         ann_algorithm: One of exhaustive_gpu, ivf_gpu, nndescent_gpu.
-        k: CAGRA graph degree after pruning, for nndescent_gpu. None backfills
-            from `n_neighbours`.
-        k_build: Build degree before pruning. None backfills to
-            `2 * n_neighbours`.
+        build_k: NN-Descent working degree, for nndescent_gpu. None uses
+            `1.5 * n_neighbours`.
+        max_iters: NN-Descent iterations. None uses the crate default.
         n_tree: Trees initialising the kNN graph. None uses the crate default.
         rho: NN-Descent sampling rate. None auto-picks.
-        beam_width: Beam width when querying. None auto-picks.
-        max_beam_iters: Beam iterations when querying. None auto-picks.
-        n_entry_points: Entry points when querying. None auto-picks.
-        extract_knn: For nndescent_gpu, return the CAGRA graph the build
-            already produced rather than beam-searching it. On by default, and
-            worth keeping: it is roughly 5x faster for about 0.4% recall.
+        refine_knn: 2-hop refinement sweeps after the descent. None runs none.
     """
 
     _BACKENDS: ClassVar[frozenset[str]] = GPU_BACKENDS
@@ -347,15 +326,12 @@ class EVoCGpu(EVoC):
         metric: str = "euclidean",
         n_list: int | None = None,
         n_probes: int | None = None,
-        k: int | None = None,
-        k_build: int | None = None,
+        build_k: int | None = None,
+        max_iters: int | None = None,
         n_tree: int | None = None,
         delta: float = 0.001,
         rho: float | None = None,
-        beam_width: int | None = None,
-        max_beam_iters: int | None = None,
-        n_entry_points: int | None = None,
-        extract_knn: bool = True,
+        refine_knn: int | None = None,
         seed: int = 42,
         verbose: int = 0,
     ) -> None:
@@ -374,15 +350,12 @@ class EVoCGpu(EVoC):
         self.metric = metric
         self.n_list = n_list
         self.n_probes = n_probes
-        self.k = k
-        self.k_build = k_build
+        self.build_k = build_k
+        self.max_iters = max_iters
         self.n_tree = n_tree
         self.delta = delta
         self.rho = rho
-        self.beam_width = beam_width
-        self.max_beam_iters = max_beam_iters
-        self.n_entry_points = n_entry_points
-        self.extract_knn = extract_knn
+        self.refine_knn = refine_knn
         self.seed = seed
         self.verbose = verbose
 
@@ -422,15 +395,12 @@ class EVoCGpu(EVoC):
             dist_metric=self.metric,
             n_list=self.n_list,
             n_probes=self.n_probes,
-            k=self.k,
-            k_build=self.k_build,
+            build_k=self.build_k,
+            max_iters=self.max_iters,
             n_tree=self.n_tree,
             delta=self.delta,
             rho=self.rho,
-            beam_width=self.beam_width,
-            max_beam_iters=self.max_beam_iters,
-            n_entry_points=self.n_entry_points,
-            extract_knn=self.extract_knn,
+            refine_knn=self.refine_knn,
             seed=self.seed,
             verbose=self.verbose,
         )

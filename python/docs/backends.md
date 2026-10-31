@@ -41,23 +41,19 @@ alongside the clustering parameters. Only the ones matching your
 | --- | --- |
 | `annoy` | `n_tree`, `search_budget` |
 | `hnsw` | `m`, `ef_construction`, `ef_search` |
-| `nndescent` | `diversify_prob`, `delta`, `ef_budget`, `extract_knn` |
+| `nndescent` | `delta` |
 | `balltree` | `bt_budget` |
 | `ivf`, `ivf_mlx` | `n_list`, `n_probes` |
-| `nndescent_mlx` | `delta`, `extract_knn` |
+| `nndescent_mlx` | `delta` |
 
-### The NN-Descent fast track
+### NN-Descent builds the graph, nothing else
 
-`extract_knn` is on by default and worth leaving on. NN-Descent's whole job is
-to build a kNN graph, so querying it for a self-kNN graph afterwards re-does
-work that has already been done. Extraction hands back the graph directly and
-skips the beam search, along with every beam parameter (`ef_budget` on the CPU,
-`beam_width` and friends on the GPU).
+NN-Descent's whole job is to build a kNN graph, and a kNN graph is exactly what
+EVoC wants. So the `nndescent` backends build the graph with `n_neighbours` per
+point and hand it straight back. No index, no beam search, no query knobs.
 
-The graph degree is widened to cover `k` when it is set, since extraction
-cannot return more neighbours than the graph holds. `None` on any optional knob
-means the crate picks. `n_list` defaults to `sqrt(n)`, `n_probes` to
-`sqrt(n_list)`, and the NN-Descent query budget is derived from `n_neighbours`.
+`None` on any optional knob means the crate picks. `n_list` defaults to
+`sqrt(n)` and `n_probes` to `sqrt(n_list)`.
 
 ## MLX on Apple Silicon
 
@@ -68,7 +64,7 @@ installed takes three more `ann_algorithm` values on the plain `EVoC`:
 | --- | --- |
 | `exhaustive_mlx` | Exact, on the Apple GPU. |
 | `ivf_mlx` | Inverted file over k-means cells, on the Apple GPU. |
-| `nndescent_mlx` | NN-Descent on the Apple GPU. With `extract_knn` it hands back the raw graph; without, it builds a CAGRA index and beam-searches it. |
+| `nndescent_mlx` | NN-Descent on the Apple GPU, handing back the kNN graph directly. |
 
 ```bash
 brew install mlx-c

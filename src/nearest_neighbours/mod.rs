@@ -4,6 +4,7 @@ pub mod nearest_neighbour_cpu;
 #[cfg(feature = "gpu")]
 pub mod nearest_neighbour_gpu;
 
+use ann_search_rs::prelude::{KNN_GRAPH_EMPTY, KnnGraph};
 use num_traits::Float;
 use rayon::prelude::*;
 
@@ -26,6 +27,7 @@ use rayon::prelude::*;
 /// ### Returns
 ///
 /// `(knn_indices, knn_dist)` excluding self, at most `k` per row.
+#[cfg(any(feature = "gpu", mlx_available))]
 pub(crate) fn strip_self<T>(
     knn_indices: Vec<Vec<usize>>,
     knn_dist: Vec<Vec<T>>,
@@ -43,6 +45,46 @@ where
                 .zip(dist)
                 .filter(|(j, _)| *j != i)
                 .take(k)
+                .unzip()
+        })
+        .unzip()
+}
+
+////////////////
+// Graph rows //
+////////////////
+
+/// Unpack a flat [`KnnGraph`] into per-point rows.
+///
+/// Slots the descent could not fill carry [`KNN_GRAPH_EMPTY`] and are dropped,
+/// so such a row comes back shorter than `k`. The graph is built without the
+/// self-edge, so nothing else needs removing.
+///
+/// ### Params
+///
+/// * `graph` - Flat graph from a matrix-in, graph-out builder, distances kept.
+///
+/// ### Returns
+///
+/// `(knn_indices, knn_dist)` excluding self.
+pub(crate) fn knn_graph_to_rows<T>(graph: KnnGraph<T>) -> (Vec<Vec<usize>>, Vec<Vec<T>>)
+where
+    T: Copy + Send + Sync,
+{
+    let k = graph.k.max(1);
+    let dist = graph
+        .distances
+        .expect("kNN graph built with return_dist = true");
+
+    graph
+        .indices
+        .par_chunks(k)
+        .zip(dist.par_chunks(k))
+        .map(|(idx, d)| {
+            idx.iter()
+                .zip(d)
+                .filter(|(j, _)| **j != KNN_GRAPH_EMPTY)
+                .map(|(&j, &d)| (j as usize, d))
                 .unzip()
         })
         .unzip()

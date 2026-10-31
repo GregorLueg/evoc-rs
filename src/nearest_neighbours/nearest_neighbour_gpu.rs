@@ -3,27 +3,15 @@
 
 use ann_search_rs::prelude::*;
 use ann_search_rs::{
-    build_exhaustive_index_gpu, build_ivf_index_gpu, build_nndescent_index_gpu,
-    extract_nndescent_knn_gpu, query_exhaustive_index_gpu_self, query_ivf_index_gpu_self,
-    query_nndescent_index_gpu_self,
+    build_exhaustive_index_gpu, build_ivf_index_gpu, build_knn_graph_nndescent_gpu,
+    query_exhaustive_index_gpu_self, query_ivf_index_gpu_self,
 };
 use cubecl::Device;
 use cubecl_utils_rs::CubeclFloat;
 use faer::MatRef;
 
-use crate::nearest_neighbours::{rescale_distances, strip_self};
+use crate::nearest_neighbours::{knn_graph_to_rows, rescale_distances, strip_self};
 use crate::prelude::*;
-
-///////////////
-// Constants //
-///////////////
-
-/// CAGRA graph degree `ann-search-rs` builds with when given `None`.
-///
-/// Mirrored rather than imported because the crate does not export it. Only a
-/// floor: widening the degree for extraction must never narrow it below what
-/// the query path would have built.
-const NNDESCENT_GPU_DEFAULT_DEGREE: usize = 30;
 
 /////////////
 // Helpers //
@@ -53,41 +41,23 @@ pub struct NearestNeighbourParamsGpuEvoc<T> {
     /// IVF-GPU: Number of lists to probes. If not provided, will default to
     /// to `sqrt(n_list)` lists.
     pub n_probes: Option<usize>,
-    /// NNDescent-GPU: Final node degree of the CAGRA graph after pruning. If
-    /// `None`, the ann-search-rs crate defaults to 30. When called via
-    /// `evoc_gpu` a `None` value is backfilled to `evoc_params.n_neighbours`
-    /// so the CAGRA graph is sized for the query.
-    pub k: Option<usize>,
-    /// NNDescent-GPU: Build node degree. Initial node degree prior to pruning.
-    /// If `None`, the ann-search-rs crate defaults to `max(k, floor(1.5 * k))`.
-    /// When called via `evoc_gpu` a `None` value is backfilled to
-    /// `2 * evoc_params.n_neighbours`.
-    pub k_build: Option<usize>,
+    /// NNDescent-GPU: Internal working degree of the descent. If `None`, the
+    /// ann-search-rs crate defaults to `1.5 * k` with `k` the number of
+    /// neighbours requested.
+    pub build_k: Option<usize>,
+    /// NNDescent-GPU: Maximum NNDescent iterations. If `None`, the
+    /// ann-search-rs crate defaults to 15.
+    pub max_iters: Option<usize>,
     /// NNDescent-GPU: Number of trees for the initialisation of the kNN graph
-    /// prior to NNDescent.
+    /// prior to NNDescent. If `None`, sized from the number of samples.
     pub n_tree: Option<usize>,
     /// NNDescent-GPU: Termination criterium for the NNDescent iterations
     pub delta: T,
     /// NNDescent-GPU: Sampling rate for the NNDescent iterations.
     pub rho: Option<T>,
-    /// NNDescent-GPU: Beam width during querying. If `None`, will be
-    /// automatically determined.
-    pub beam_width: Option<usize>,
-    /// NNDescent-GPU: Iterations during querying. If `None`, will be
-    /// automatically determined
-    pub max_beam_iters: Option<usize>,
-    /// NNDescent-GPU: Number of entry points during querying to use. If `None`,
-    /// will be automatically determined.
-    pub n_entry_points: Option<usize>,
-    /// NNDescent-GPU: return the CAGRA graph the build already produced instead
-    /// of running a beam search over it. Defaults to `true`.
-    ///
-    /// A self-kNN query re-searches a graph that is already a kNN graph, which
-    /// is the work the build just did. Extraction skips it, along with every
-    /// beam parameter. The graph degree is widened to cover `k` when this is
-    /// set, since extraction cannot return more neighbours than the graph
-    /// holds. No effect on the other GPU backends.
-    pub extract_knn: bool,
+    /// NNDescent-GPU: 2-hop refinement sweeps after the main loop. If `None`,
+    /// no refinement runs.
+    pub refine_knn: Option<usize>,
 }
 
 impl<T> NearestNeighbourParamsGpuEvoc<T> {
@@ -107,21 +77,13 @@ impl<T> NearestNeighbourParamsGpuEvoc<T> {
     ///
     /// **NNDescent-GPU**
     ///
-    /// * `k` - Final node degree after CAGRA pruning. Defaults to `30` in
-    ///   ann-search-rs; backfilled to `evoc_params.n_neighbours` when called
-    ///   via `evoc_gpu`.
-    /// * `k_build` - Initial node degree before pruning. Defaults to
-    ///   `max(k, floor(1.5 * k))` in ann-search-rs; backfilled to
-    ///   `2 * evoc_params.n_neighbours` when called via `evoc_gpu`.
-    /// * `n_tree` - Number of Annoy trees for kNN graph initialisation.
+    /// * `build_k` - Internal working degree. Defaults to `1.5 * k` in
+    ///   ann-search-rs.
+    /// * `max_iters` - Maximum NNDescent iterations. Defaults to `15`.
+    /// * `n_tree` - Number of trees for kNN graph initialisation.
     /// * `delta` - Convergence threshold for NNDescent iterations.
     /// * `rho` - Sampling rate for NNDescent iterations.
-    /// * `beam_width` - Beam width during querying. Auto-determined if `None`.
-    /// * `max_beam_iters` - Maximum beam search iterations. Auto-determined
-    ///   if `None`.
-    /// * `n_entry_points` - Number of entry points for querying.
-    ///   Auto-determined if `None`.
-    /// * `extract_knn` - Return the built CAGRA graph rather than searching it.
+    /// * `refine_knn` - 2-hop refinement sweeps after the main loop.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         dist_metric: String,
@@ -129,29 +91,23 @@ impl<T> NearestNeighbourParamsGpuEvoc<T> {
         n_list: Option<usize>,
         n_probes: Option<usize>,
         // nndescent-gpu
-        k: Option<usize>,
-        k_build: Option<usize>,
+        build_k: Option<usize>,
+        max_iters: Option<usize>,
         n_tree: Option<usize>,
         delta: T,
         rho: Option<T>,
-        beam_width: Option<usize>,
-        max_beam_iters: Option<usize>,
-        n_entry_points: Option<usize>,
-        extract_knn: bool,
+        refine_knn: Option<usize>,
     ) -> Self {
         Self {
             dist_metric,
             n_list,
             n_probes,
-            k,
-            k_build,
+            build_k,
+            max_iters,
             n_tree,
             delta,
             rho,
-            beam_width,
-            max_beam_iters,
-            n_entry_points,
-            extract_knn,
+            refine_knn,
         }
     }
 }
@@ -173,15 +129,12 @@ where
             n_list: None,
             n_probes: None,
             // nndescent-gpu
-            k: None,
-            k_build: None,
+            build_k: None,
+            max_iters: None,
             n_tree: None,
             delta: T::from(0.001).unwrap(),
             rho: None,
-            beam_width: None,
-            max_beam_iters: None,
-            n_entry_points: None,
-            extract_knn: true,
+            refine_knn: None,
         }
     }
 }
@@ -249,90 +202,68 @@ where
         AnnSearchGpu::default()
     });
 
-    let (knn_indices_raw, knn_dist) = match ann_search {
-        AnnSearchGpu::ExhaustiveGpu => {
-            let index = build_exhaustive_index_gpu::<T>(data, &params_nn.dist_metric, device)?;
+    let dist_metric = &params_nn.dist_metric;
 
-            query_exhaustive_index_gpu_self(&index, k + 1, true, verbosity.detailed_verbosity())?
+    // The f32 self-queries return `k + 1` rows that usually, but not always,
+    // lead with the point itself. The NNDescent builder returns the kNN graph
+    // directly, which holds no self-edge.
+    let (knn_indices, knn_dist) = match ann_search {
+        AnnSearchGpu::ExhaustiveGpu => {
+            let index = build_exhaustive_index_gpu::<T>(data, dist_metric, device, verbosity)?;
+
+            let (idx, dist) = query_exhaustive_index_gpu_self(&index, k + 1, true, verbosity)?;
+            strip_self(
+                idx,
+                dist.expect("self-query run with return_dist = true"),
+                k,
+            )
         }
         AnnSearchGpu::IvfGpu => {
             let index = build_ivf_index_gpu::<T>(
                 data,
                 params_nn.n_list,
                 None,
-                &params_nn.dist_metric,
+                dist_metric,
                 seed,
-                verbosity.detailed_verbosity(),
+                verbosity,
                 device,
             )?;
 
-            query_ivf_index_gpu_self(
-                &index,
-                k + 1,
-                params_nn.n_probes,
-                None,
-                true,
-                verbosity.normal_verbosity(),
-            )?
+            let (idx, dist) =
+                query_ivf_index_gpu_self(&index, k + 1, params_nn.n_probes, None, true, verbosity)?;
+            strip_self(
+                idx,
+                dist.expect("self-query run with return_dist = true"),
+                k,
+            )
         }
         AnnSearchGpu::NNDescentGpu => {
-            // Extraction can only hand back what the CAGRA graph holds, so the
-            // degree has to cover the request. Anything the caller pinned wins;
-            // a `None` is widened rather than left at the crate's 30.
-            let graph_k = if params_nn.extract_knn {
-                Some(
-                    params_nn
-                        .k
-                        .unwrap_or(NNDESCENT_GPU_DEFAULT_DEGREE)
-                        .max(k + 1),
-                )
-            } else {
-                params_nn.k
-            };
-
-            let mut index = build_nndescent_index_gpu::<T>(
-                data,
-                &params_nn.dist_metric,
-                graph_k,
-                params_nn.k_build,
-                None,
+            let nn_params = NNDescentGpuKnnParams::new(
+                k,
+                params_nn.build_k,
+                params_nn.max_iters,
                 params_nn.n_tree,
-                params_nn.delta.to_f32().map(Some).unwrap_or(None),
+                params_nn.delta.to_f32(),
                 params_nn.rho.map(|r| r.to_f32().unwrap()),
+                params_nn.refine_knn,
+                false,
+                true,
+            );
+            let graph = build_knn_graph_nndescent_gpu::<T>(
+                data,
+                dist_metric,
+                Some(nn_params),
                 None,
                 seed,
-                verbosity.detailed_verbosity(),
-                false,
+                verbosity,
                 device,
             )?;
 
-            if params_nn.extract_knn {
-                // `include_self` so the row shape matches the query path and the
-                // shared self-filter below applies to both.
-                extract_nndescent_knn_gpu(&index, Some(k + 1), true, true)?
-            } else {
-                // Mirror CagraGpuSearchParams::from_graph so beam_width/iters
-                // scale with the requested k_out and the CAGRA graph degree.
-                // Passing None here does not defer to the crate's from_graph
-                // fallback - the raw BEAM_WIDTH=16 default caps returned
-                // neighbours at 15 after self-filtering.
-                let k_graph = graph_k.unwrap_or(NNDESCENT_GPU_DEFAULT_DEGREE);
-                let scaled_bw = (k + 1).max(k_graph).max(16) * 2;
-                let query_params = CagraGpuSearchParams::new(
-                    params_nn.beam_width.or(Some(scaled_bw)),
-                    params_nn.max_beam_iters.or(Some(scaled_bw * 3)),
-                    params_nn.n_entry_points,
-                    None,
-                );
-
-                query_nndescent_index_gpu_self(&mut index, k + 1, Some(query_params), true)?
-            }
+            knn_graph_to_rows(graph)
         }
     };
 
-    let (knn_indices, knn_dist) = strip_self(knn_indices_raw, knn_dist.unwrap(), k);
-
-    let knn_dist = rescale_distances(knn_dist, &params_nn.dist_metric);
+    let knn_dist = rescale_distances(knn_dist, dist_metric);
 
     Ok((knn_indices, knn_dist))
 }

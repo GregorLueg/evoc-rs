@@ -44,23 +44,15 @@ before you commit to it.
 | --- | --- |
 | `ivf_gpu` | Default. Inverted file over k-means cells. |
 | `exhaustive_gpu` | Exact. Where the GPU wins by the largest margin. |
-| `nndescent_gpu` | CAGRA-style graph, built and queried on device. |
+| `nndescent_gpu` | NN-Descent on device, handing back the kNN graph directly. |
 
-Knobs are `n_list` and `n_probes` for `ivf_gpu`, and `k`, `k_build`, `n_tree`,
-`delta`, `rho`, `beam_width`, `max_beam_iters`, `n_entry_points` and
-`extract_knn` for `nndescent_gpu`.
+Knobs are `n_list` and `n_probes` for `ivf_gpu`, and `build_k`, `max_iters`,
+`n_tree`, `delta`, `rho` and `refine_knn` for `nndescent_gpu`.
 
-`extract_knn` is on by default and hands back the CAGRA graph the build already
-produced rather than beam-searching it, which skips every beam parameter above.
-If you want to make sure your graph is as good as possible, use
-`extract_knn = False`.
-
-The two CAGRA degrees are worth knowing about. `k` is the graph degree after
-pruning and `k_build` the degree before it, and both are independent of the
-`n_neighbours` you are querying for. Left at the crate defaults they sit below
-`n_neighbours` whenever you ask for more than 30 neighbours, and the beam search
-then walks a graph too small to answer the query well. `None` on either
-backfills from `n_neighbours`, so leave them alone unless you have a reason.
+`nndescent_gpu` builds the graph with `n_neighbours` per point and returns it,
+with no CAGRA pruning and no beam search on top. `build_k` is the working degree
+during the descent and defaults to `1.5 * n_neighbours`. Datasets too big for a
+single device buffer are built in balanced batches automatically.
 
 ## float32 only
 

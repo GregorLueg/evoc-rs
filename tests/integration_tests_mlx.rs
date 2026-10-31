@@ -54,26 +54,18 @@ fn mlx_integration_01_clusters_all_backends() {
 }
 
 /// Every backend returns exactly `k` neighbours per point, none of them self,
-/// including the beam-search path of NNDescent and an `f64` input.
+/// including an `f64` input.
 #[test]
 fn mlx_integration_02_knn_shape_no_self() {
     let (n, dim, nc, seed) = ACC_FIXTURE;
     let (mat, _) = generate_clustered_data::<f64>(n, dim, nc, seed);
     let k = 15;
 
-    let extract = NearestNeighbourParamsEvoc::<f64>::default();
-    let beam = NearestNeighbourParamsEvoc::<f64> {
-        extract_knn: false,
-        ..NearestNeighbourParamsEvoc::default()
-    };
+    let nn_params = NearestNeighbourParamsEvoc::<f64>::default();
 
-    for (ann_type, nn_params) in MLX_BACKENDS
-        .iter()
-        .map(|a| (*a, &extract))
-        .chain(std::iter::once(("nndescent_mlx", &beam)))
-    {
+    for ann_type in MLX_BACKENDS {
         let (idx, dist) =
-            run_ann_search(mat.as_ref(), k, ann_type.to_string(), nn_params, 42, 0).unwrap();
+            run_ann_search(mat.as_ref(), k, ann_type.to_string(), &nn_params, 42, 0).unwrap();
 
         assert_eq!(idx.len(), n);
         for i in 0..n {

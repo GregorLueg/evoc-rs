@@ -37,24 +37,18 @@ struct NnGpuArgs {
     n_list: Option<usize>,
     /// IVF-GPU: number of lists to probe.
     n_probes: Option<usize>,
-    /// NNDescent-GPU: CAGRA graph degree after pruning.
-    k: Option<usize>,
-    /// NNDescent-GPU: build degree before pruning.
-    k_build: Option<usize>,
+    /// NNDescent-GPU: internal working degree.
+    build_k: Option<usize>,
+    /// NNDescent-GPU: maximum iterations.
+    max_iters: Option<usize>,
     /// NNDescent-GPU: trees for the kNN graph initialisation.
     n_tree: Option<usize>,
     /// NNDescent-GPU: termination criterion.
     delta: f64,
     /// NNDescent-GPU: sampling rate.
     rho: Option<f64>,
-    /// NNDescent-GPU: beam width when querying.
-    beam_width: Option<usize>,
-    /// NNDescent-GPU: beam iterations when querying.
-    max_beam_iters: Option<usize>,
-    /// NNDescent-GPU: entry points when querying.
-    n_entry_points: Option<usize>,
-    /// NNDescent-GPU: return the built CAGRA graph instead of searching it.
-    extract_knn: bool,
+    /// NNDescent-GPU: 2-hop refinement sweeps.
+    refine_knn: Option<usize>,
 }
 
 impl NnGpuArgs {
@@ -64,15 +58,12 @@ impl NnGpuArgs {
             dist_metric: self.dist_metric.clone(),
             n_list: self.n_list,
             n_probes: self.n_probes,
-            k: self.k,
-            k_build: self.k_build,
+            build_k: self.build_k,
+            max_iters: self.max_iters,
             n_tree: self.n_tree,
             delta: self.delta as f32,
             rho: self.rho.map(|v| v as f32),
-            beam_width: self.beam_width,
-            max_beam_iters: self.max_beam_iters,
-            n_entry_points: self.n_entry_points,
-            extract_knn: self.extract_knn,
+            refine_knn: self.refine_knn,
         }
     }
 }
@@ -108,15 +99,12 @@ impl NnGpuArgs {
     dist_metric,
     n_list,
     n_probes,
-    k,
-    k_build,
+    build_k,
+    max_iters,
     n_tree,
     delta,
     rho,
-    beam_width,
-    max_beam_iters,
-    n_entry_points,
-    extract_knn,
+    refine_knn,
     seed = 42,
     verbose = 0,
 ))]
@@ -140,15 +128,12 @@ pub(crate) fn run_evoc_gpu<'py>(
     dist_metric: String,
     n_list: Option<usize>,
     n_probes: Option<usize>,
-    k: Option<usize>,
-    k_build: Option<usize>,
+    build_k: Option<usize>,
+    max_iters: Option<usize>,
     n_tree: Option<usize>,
     delta: f64,
     rho: Option<f64>,
-    beam_width: Option<usize>,
-    max_beam_iters: Option<usize>,
-    n_entry_points: Option<usize>,
-    extract_knn: bool,
+    refine_knn: Option<usize>,
     seed: usize,
     verbose: usize,
 ) -> PyResult<Bound<'py, PyAny>> {
@@ -173,15 +158,12 @@ pub(crate) fn run_evoc_gpu<'py>(
         dist_metric,
         n_list,
         n_probes,
-        k,
-        k_build,
+        build_k,
+        max_iters,
         n_tree,
         delta,
         rho,
-        beam_width,
-        max_beam_iters,
-        n_entry_points,
-        extract_knn,
+        refine_knn,
     };
 
     let (data, n, dim) = convert::flat(&a)?;

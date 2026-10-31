@@ -3,6 +3,24 @@
 Changes to the `evoc-rs` Python package. The Rust crate it wraps, `evoc-rs`, has
 its own changelog at [`../CHANGELOG.md`](../CHANGELOG.md).
 
+## 0.3.0
+
+Requires `evoc-rs` 0.6.0.
+
+**Breaking changes**
+
+- `EVoC` drops `diversify_prob`, `ef_budget` and `extract_knn`. NN-Descent now
+  hands back the kNN graph it builds, with no beam search.
+- `EVoCGpu` drops `k`, `beam_width`, `max_beam_iters`, `n_entry_points` and
+  `extract_knn`. `k_build` is now `build_k` and defaults to
+  `1.5 * n_neighbours`. New `max_iters` and `refine_knn`.
+
+**Features**
+
+- Pull in `evoc-rs` 0.6.0 with `ann-search-rs` 0.12.
+- `verbose` reaches the kNN stage: `1` prints build and query progress, `2`
+  adds the timed build stages.
+
 ## 0.2.0
 
 Requires `evoc-rs` 0.5.0.
