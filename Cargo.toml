@@ -47,6 +47,3 @@ cubecl-utils-rs = { version = "0.2.0", optional = true }
 
 [dev-dependencies]
 ann-search-rs = { version = "0.12.0", features = ["synthetic"] }
-
-[patch.crates-io]
-ann-search-rs = { git = "https://github.com/GregorLueg/ann-search-rs", branch = "chore-clean-up" }
