@@ -3,6 +3,34 @@
 Changes to the `evoc-rs` crate. The Python package `evoc-rs` has its own
 changelog at [`python/CHANGELOG.md`](python/CHANGELOG.md).
 
+## 0.7.0
+
+**Breaking changes**
+
+- `run_ann_search` and `evoc` search in `f32` whatever `T` is, on every CPU
+  backend bar `"exhaustive"`, and cast the distances back up to `T`.
+  `"exhaustive"` stays in `T`, so `f64` runs still give ground truth. `f64` input
+  gives different results than 0.6.0 at the same seed. Data whose squared
+  distances do not fit `f32`, or whose structure sits below `f32` resolution next
+  to a large offset, loses neighbour recall on `f64` input as it always has on
+  `f32`.
+
+**Features**
+
+- `run_ann_search` and `evoc` lose the `HnswIndex<T>` and `NNDescent<T>` trait
+  bounds.
+
+**Bug fixes**
+
+- Self is removed from kNN rows by index rather than position on the CPU
+  backends, so an exact duplicate ranked first no longer leaves a point as its
+  own neighbour.
+
+**Performance**
+
+- On `f64` input at 200k points, the kNN stage is 1.3 to 2.7x faster and the
+  whole run 8 to 41%. `f32` input and peak memory do not change.
+
 ## 0.6.0
 
 **Breaking changes**
