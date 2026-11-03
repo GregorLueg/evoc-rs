@@ -258,7 +258,7 @@ fn integration_04c_layers_sorted_descending() {
 fn integration_05_search_for_n_clusters_exact() {
     let (data, gt) = make_blobs(30, 2, 4, 50.0, 0.5, 42);
 
-    // Inline the search since it's private — or make it pub(crate)
+    // Inline the search since it's private, or make it pub(crate)
     let n = data.len();
     let mut mst = build_mst(&data, 3);
     let linkage = mst_to_linkage_tree(&mut mst, n);
@@ -381,7 +381,7 @@ fn integration_07_embedding_preserves_clusters() {
     use evoc_rs::graph::embedding::*;
     use evoc_rs::graph::fuzzy_graph::*;
 
-    // 2 clusters, large separation, tight spread -- easy problem
+    // 2 clusters, large separation, tight spread: easy problem
     let (data, gt) = make_blobs(60, 2, 6, 80.0, 0.5, 42);
     let n = data.len();
     let k = 15;

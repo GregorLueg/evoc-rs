@@ -66,7 +66,7 @@ fn label_prop_iteration<T: EvocFloat>(csr: &Csr<T>, labels: &[i64]) -> Vec<i64> 
             // Threshold, and it sits on a value the data produces exactly: a
             // single edge weighted 1.0 is accepted by the `v == max_vote` arm
             // below, one weighted 1.0 - 1 ulp is rejected outright. That makes
-            // this line load-bearing for reproducibility, and it is why
+            // this line decide reproducibility, and it is why
             // `symmetrise_graph` snaps its t-conorm endpoint rather than
             // letting the rounding decide. Do not relax that snap without
             // revisiting this.
@@ -536,7 +536,7 @@ fn label_prop_init_inner<T: EvocFloat>(
 /// ### Params
 ///
 /// * `graph` - The fuzzy simplicial set in COO format
-/// * `n_components` - Embedding dimensionality (typically 4-16)
+/// * `n_components` - Embedding dimensionality (4-16 by default)
 /// * `data` - Original data for PCA base case. If `None`, falls back to random.
 /// * `seed` - RNG seed for reproducibility
 /// * `verbose` - If `0` -> silent or `1` for normal verbosity, `2` for detailed
@@ -708,7 +708,7 @@ mod tests {
         assert!((data[2][1] - 1.0).abs() < 1e-12);
     }
 
-    // -- integration: full init on a small graph ----------------------------
+    // Integration: full init on a small graph
 
     #[test]
     fn init_small_graph_random_base() {

@@ -121,7 +121,7 @@ mod tests {
 
     #[test]
     fn test_linkage_unsorted_input() {
-        // feed edges in wrong order -- should still work
+        // feed edges in wrong order, should still work
         let mut mst = vec![
             MstEdge {
                 u: 1,

@@ -42,8 +42,8 @@ const SMOOTH_K_REL_TOLERANCE: f64 = 1e-6;
 ///   nearest neighbours
 /// * `k` - Number of nearest neighbours (used to compute target = log2(k))
 /// * `local_connectivity` - Number of nearest neighbours to assume are at
-///   distance zero (typically 1.0). Allows for local manifold structure.
-/// * `n_iter` - Maximum number of binary search iterations (typically 64)
+///   distance zero (1.0 in the pipeline). Allows for local manifold structure.
+/// * `n_iter` - Maximum number of binary search iterations (64 in the pipeline)
 ///
 /// ### Returns
 ///

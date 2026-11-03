@@ -22,9 +22,8 @@ changelog at [`python/CHANGELOG.md`](python/CHANGELOG.md).
 
 **Bug fixes**
 
-- Self is removed from kNN rows by index rather than position on the CPU
-  backends, so an exact duplicate ranked first no longer leaves a point as its
-  own neighbour.
+- The CPU backends remove self from kNN rows by index, not position, so an exact
+  duplicate ranked first no longer leaves a point as its own neighbour.
 
 **Performance**
 
@@ -265,17 +264,15 @@ changelog at [`python/CHANGELOG.md`](python/CHANGELOG.md).
 
 **Features:**
 
-- Version bump to latest version of `manifolds-rs`, unlocking GPU-accelerated
-  kNN searches.
-- GPU-accelerated version of EVoC that leverages the GPU-accelerated kNN
-  searches under the hood.
+- Version bump to latest version of `manifolds-rs`, which adds GPU kNN searches.
+- GPU version of EVoC that runs those kNN searches under the hood.
 
 ## 0.1.1
 
 **Features:**
 
-- Version bump to latest version of `manifolds-rs`, unlocking IVF as an
-  appproximate nearest neighbour searches.
+- Version bump to latest version of `manifolds-rs`, which adds IVF as an
+  approximate nearest neighbour search.
 
 ## 0.1.0
 

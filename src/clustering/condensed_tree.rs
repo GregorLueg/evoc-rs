@@ -300,7 +300,7 @@ pub fn extract_leaves(tree: &CondensedTree<impl EvocFloat>) -> Vec<usize> {
 /// ### Params
 ///
 /// * `tree` - Condensed tree produced by `condense_tree()`.
-/// * `clusters` - Selected cluster IDs, typically the output of
+/// * `clusters` - Selected cluster IDs, such as the output of
 ///   `extract_leaves()`
 /// * `n_samples` - Number of original data points
 ///
@@ -412,7 +412,7 @@ where
 /// ### Params
 ///
 /// * `tree` - Condensed tree produced by `condense_tree()`
-/// * `clusters` - Selected cluster IDs, typically the output of
+/// * `clusters` - Selected cluster IDs, such as the output of
 ///   `extract_leaves()`
 /// * `labels` - Cluster label per point from `get_cluster_label_vector()`
 ///

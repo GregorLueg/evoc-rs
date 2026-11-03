@@ -6,7 +6,7 @@
 //! thread-pool and GPU-probe helpers. Defaults, validation and the
 //! scikit-learn shaped estimator all live in `evoc_rs/`.
 //!
-//! Two invariants hold throughout, and both are load-bearing:
+//! Two invariants hold throughout:
 //!
 //! - Everything expensive runs inside `Python::detach`, so the GIL is dropped
 //!   for the whole rayon fan-out. See [`evoc`] for the nesting rule.

@@ -14,7 +14,7 @@ name = "evoc_rs"
 path = "src/lib.rs"
 
 [features]
-## Enable GPU-accelerated approximate nearest neighbour search for the kNN stage
+## GPU approximate nearest neighbour search for the kNN stage
 gpu = ["ann-search-rs/gpu", "cubecl", "cubecl-utils-rs"]
 ## Experimental, Apple Silicon only: MLX kNN backends via mlx-c, as the
 ## `*_mlx` `ann_type`s of `evoc`.

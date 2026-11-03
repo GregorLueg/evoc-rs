@@ -92,7 +92,7 @@ How it stacks up against `EVoCGpu` on the same Mac is not benchmarked yet.
 `euclidean` or `cosine`. Nothing else, and an unknown string raises rather than
 silently falling back.
 
-Cosine is usually right for embeddings out of a transformer, since the vectors
+Cosine is the right default for embeddings out of a transformer, since the vectors
 carry meaning in direction rather than magnitude. Euclidean is right for
 anything already scaled.
 

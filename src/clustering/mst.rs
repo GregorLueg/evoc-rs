@@ -4,7 +4,7 @@
 //! hierarchy. Edge weights are mutual reachability distances: the Euclidean
 //! distance between two points, inflated to the larger of their core
 //! distances. This pushes sparse points further apart and makes cluster
-//! boundaries more robust to noise.
+//! boundaries less sensitive to noise.
 //!
 //! The KD-tree from [`crate::clustering::kd_tree`] accelerates the
 //! per-round nearest-other-component search via same-component subtree
@@ -71,7 +71,7 @@ pub struct MstEdge<T> {
 /// ### Params
 ///
 /// * `data` - Point coordinates; `data[i]` is the embedding vector for point
-///   i. Typically 4-16 dimensional from the EVoC embedding stage.
+///   i. 4-16 dimensional by default, from the EVoC embedding stage.
 /// * `min_samples` - Controls density estimation: core distance for point i is
 ///   the distance to its `min_samples`-th nearest neighbour.
 ///
