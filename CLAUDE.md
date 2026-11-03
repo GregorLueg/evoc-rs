@@ -46,6 +46,12 @@ Both take anything implementing `EvocMatrix<T>` (faer, ndarray, or a row-major `
 
 Everything is generic over `T: EvocFloat` (`src/utils/traits.rs`) which composes `Float + FromPrimitive + ToPrimitive + Send + Sync + Sum + Default + SimdDistance + AddAssign + ComplexField + RealField + 'static`. This is a blanket impl, not something to implement manually — it works for `f32` and `f64` on the CPU path. **GPU path is `f32` only** (WGSL has no `f64`, and consumer GPUs cripple `f64` throughput).
 
+### Precision
+
+`T` is not the working precision everywhere. Every kNN backend bar the CPU `exhaustive` searches in `f32` and casts the distances up to `T`, and self is removed by index because narrowing turns distinct points into duplicates. PCA centring and SVD (`pca_init`) and the persistence curve always run in `f64`. Everything else stays in `T`.
+
+Carrying more in `f64` was measured at 20k points and 16 seeds: data coarsening, layout centring, recomputing kNN distances and edge weights gave no measurable improvement in clustering or in `f32`/`f64` agreement, so do not retry them without new evidence. `f32` and `f64` still disagree on near-duplicate cosine data. That predates the `f32` search and is undiagnosed.
+
 ### Feature gate
 
 The `gpu` feature enables `ann-search-rs/gpu` + the `cubecl` dependency. Everything GPU-related is behind `#[cfg(feature = "gpu")]`:
@@ -57,7 +63,7 @@ The `gpu` feature enables `ann-search-rs/gpu` + the `cubecl` dependency. Everyth
 
 When adding GPU-touching code, mirror this pattern.
 
-The `mlx` feature enables `ann-search-rs/mlx`, but the gate is `#[cfg(mlx_available)]`, not the feature. ann-search-rs links mlx-c and exports `DEP_MLXC_AVAILABLE=1` only when it found the library; `build.rs` turns that into `cfg(mlx_available)`. Without mlx-c the feature is on but the MLX code is left out, and `MLX_AVAILABLE` reports `false`. The MLX backends are extra `AnnSearch` variants in `nearest_neighbour_cpu.rs` (cast to `f32` in, distances cast back to `T`), not a separate entry point. `tests/integration_tests_mlx.rs` is guarded with `#![cfg(mlx_available)]`.
+The `mlx` feature enables `ann-search-rs/mlx`, but the gate is `#[cfg(mlx_available)]`, not the feature. ann-search-rs links mlx-c and exports `DEP_MLXC_AVAILABLE=1` only when it found the library; `build.rs` turns that into `cfg(mlx_available)`. Without mlx-c the feature is on but the MLX code is left out, and `MLX_AVAILABLE` reports `false`. The MLX backends are extra `AnnSearch` variants in `nearest_neighbour_cpu.rs`, not a separate entry point. `tests/integration_tests_mlx.rs` is guarded with `#![cfg(mlx_available)]`.
 
 ### Prelude
 

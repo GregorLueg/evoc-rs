@@ -83,7 +83,7 @@ let result = evoc(
     &nn_params,
     42,            // seed
     1,             // verbose (normal levels)
-);
+)?;
 
 // Best clustering by persistence score
 let labels = result.best_labels();
@@ -103,6 +103,14 @@ let params = EvocParams {
     ..EvocParams::default()
 };
 ```
+
+A note on precision: every CPU backend bar `"exhaustive"` searches in `f32`
+whatever `T` is, and the distances come back cast up to `T`. On `f64` input that
+takes 8 to 41% off a 200k run. Everything after the search stays in `T`, bar the
+PCA and the persistence curve, which always run in `f64`. The catch: structure
+below `f32` resolution is gone before the search sees it, so centre Euclidean data
+that sits on a huge offset first. Want the search itself in `f64`? Use
+`"exhaustive"`.
 
 ### GPU-accelerated kNN (requires `gpu` feature)
 
@@ -129,14 +137,14 @@ let result = evoc_gpu::<f32>(
     WgpuDevice::default().into(),
     42,
     1,
-);
+)?;
 
 let labels = result.best_labels();
 ```
 
 A note on precision: GPU computation runs in `f32`. WGSL (the wgpu shader
 language) has no `f64`, and `f64` throughput on consumer GPUs is typically
-1/32 to 1/64 of `f32` regardless. If you need double precision, stick to the
+1/32 to 1/64 of `f32` regardless. If you need `f64` past the search, stick to the
 CPU path. GPU results are also not bit-reproducible across runs due to
 non-deterministic parallel reduction order; structural quality is consistent.
 
@@ -167,11 +175,11 @@ let result = evoc(
     &nn_params,
     42,
     1,
-);
+)?;
 ```
 
-The search itself runs in `f32` whatever `T` is, so `f64` input loses
-precision in the kNN stage only. `NearestNeighbourParamsEvoc` carries over:
+The search runs in `f32` whatever `T` is, `"exhaustive_mlx"` included.
+`NearestNeighbourParamsEvoc` carries over:
 `n_list` and `n_probes` drive `ivf_mlx`, `delta` drives `nndescent_mlx`. Still experimental; benchmarks against the wgpu path are
 outstanding.
 

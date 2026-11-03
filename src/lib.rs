@@ -178,7 +178,8 @@ impl<T: EvocFloat> EvocResult<T> {
 ///
 /// 1. **kNN graph** — builds an approximate nearest-neighbour graph via the
 ///    selected ANN backend (`ann_type`), or uses `precomputed_knn` if
-///    provided.
+///    provided. Every backend bar `"exhaustive"` searches in `f32` whatever
+///    `T` is.
 /// 2. **Fuzzy simplicial set** — smooths and optionally symmetrises the kNN
 ///    graph into a weighted undirected graph.
 /// 3. **Node embedding** — optimises a low-dimensional layout using the EVoC
