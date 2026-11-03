@@ -57,8 +57,8 @@ single device buffer are built in balanced batches automatically.
 ## float32 only
 
 WGSL has no `f64`, and consumer GPUs cripple its throughput anyway. `EVoCGpu`
-casts float64 input down rather than refusing it, which is the one place in this
-library that narrows on your behalf.
+casts float64 input down rather than refusing it, and the whole pipeline then
+runs in float32, output included. `EVoC` only narrows for the search.
 
 ```python
 model = evoc_rs.EVoCGpu().fit(X.astype(np.float64))

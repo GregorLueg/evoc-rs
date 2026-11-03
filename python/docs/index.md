@@ -32,7 +32,7 @@ original space is the kNN search.
 And you get a hierarchy, not a labelling. `cluster_layers_` holds one labelling
 per granularity, `persistence_scores_` says how stable each is, and `labels_`
 picks the most stable for you. That last part is a convenience, not the answer:
-the layers either side are often the interesting ones. See
+the layers either side can be the interesting ones. See
 [the cluster hierarchy](hierarchy.md).
 
 ## Where to go next

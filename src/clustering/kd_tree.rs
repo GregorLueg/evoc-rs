@@ -384,8 +384,8 @@ impl<T: EvocFloat> KdTree<T> {
     /// Bottom-up sweep to label each node with its component.
     ///
     /// A node receives a component label if all points in its subtree share
-    /// the same component. Otherwise it is labelled `-1` (mixed). This
-    /// enables same-component pruning in `nearest_other_component`.
+    /// the same component. Otherwise it is labelled `-1` (mixed).
+    /// `nearest_other_component` prunes same-component nodes with this.
     ///
     /// ### Params
     ///

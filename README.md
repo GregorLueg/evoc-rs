@@ -5,36 +5,35 @@
 
 # evoc-rs
 
-Rust implementation of **EVoC** (Embedding Vector Oriented Clustering): efficient
+Rust implementation of **EVoC** (Embedding Vector Oriented Clustering):
 density-based clustering of high-dimensional embedding vectors (CLIP, sentence
 transformers, and the like).
 
 EVoC combines a UMAP-like node embedding with HDBSCAN-style density estimation
-and multi-layer persistence analysis to produce stable, hierarchical clusterings
-without requiring you to specify the number of clusters up front.
+and multi-layer persistence analysis. You get stable, hierarchical clusterings
+and don't have to pick the number of clusters up front.
 
-This crate is a port of the original Python implementation by Leland McInnes at
-the [Tutte Institute](https://github.com/TutteInstitute/evoc), extended with
-support for multiple approximate nearest neighbour backends via
-[ann-search-rs](https://crates.io/crates/ann-search-rs), including optional
-GPU-accelerated kNN via [cubecl](https://crates.io/crates/cubecl) and, on
-Apple Silicon, via [MLX](https://github.com/ml-explore/mlx-c).
+This crate ports the original Python implementation by Leland McInnes at the
+[Tutte Institute](https://github.com/TutteInstitute/evoc). It adds multiple
+approximate nearest neighbour backends via
+[ann-search-rs](https://crates.io/crates/ann-search-rs), with optional GPU kNN
+via [cubecl](https://crates.io/crates/cubecl) and, on Apple Silicon, via
+[MLX](https://github.com/ml-explore/mlx-c).
 
 ## How it works
 
-1. **kNN graph** — approximate nearest-neighbour search via a selectable ANN
-   backend (NNDescent, HNSW, or a precomputed graph). Optionally GPU-accelerated.
-2. **Fuzzy simplicial set** — the kNN graph is smoothed and symmetrised into a
+1. **kNN graph**: approximate nearest-neighbour search through a selectable ANN
+   backend (NNDescent, HNSW, or a precomputed graph). Optionally on the GPU.
+2. **Fuzzy simplicial set**: smooths the kNN graph and symmetrises it into a
    weighted undirected graph.
-3. **Node embedding** — a low-dimensional layout is optimised using the EVoC
-   gradient, a modified UMAP repulsion term controlled by a `noise_level`
-   parameter.
-4. **MST** — a minimum spanning tree is built over the embedding using mutual
+3. **Node embedding**: optimises a low-dimensional layout with the EVoC gradient,
+   a modified UMAP repulsion term controlled by `noise_level`.
+4. **MST**: builds a minimum spanning tree over the embedding using mutual
    reachability distances.
-5. **Cluster layers** — a hierarchy of clusterings is extracted via persistence
-   analysis, returning the most stable granularities. Alternatively, a target
-   number of clusters can be specified and the algorithm will binary-search for
-   the closest match.
+5. **Cluster layers**: extracts a hierarchy of clusterings via persistence
+   analysis and returns the most stable granularities. Already know how many
+   clusters you want? Give it a target and it binary-searches for the closest
+   match.
 
 ## Installation
 
@@ -45,7 +44,7 @@ Just add the dependency to your `cargo.toml` file:
 evoc-rs = "*"
 ```
 
-To enable GPU-accelerated kNN search:
+For GPU kNN search:
 
 ```toml
 [dependencies]
@@ -66,8 +65,6 @@ prefix. No mlx-c, no MLX: the build warns and carries on without it, and
 
 ## Usage
 
-Here is how you would use it.
-
 ```rust
 use evoc_rs::{evoc, EvocParams};
 use evoc_rs::prelude::*;
@@ -83,7 +80,7 @@ let result = evoc(
     &nn_params,
     42,            // seed
     1,             // verbose (normal levels)
-);
+)?;
 
 // Best clustering by persistence score
 let labels = result.best_labels();
@@ -104,9 +101,17 @@ let params = EvocParams {
 };
 ```
 
+A note on precision: every CPU backend bar `"exhaustive"` searches in `f32`
+whatever `T` is, and the distances come back cast up to `T`. On `f64` input that
+takes 8 to 41% off a 200k run. Everything after the search stays in `T`, bar the
+PCA and the persistence curve, which always run in `f64`. The catch: structure
+below `f32` resolution is gone before the search sees it, so centre Euclidean data
+that sits on a huge offset first. Want the search itself in `f64`? Use
+`"exhaustive"`.
+
 ### GPU-accelerated kNN (requires `gpu` feature)
 
-For larger datasets, the nearest neighbour search is typically the bottleneck.
+On wide data, the nearest neighbour search is the bottleneck.
 With the `gpu` feature, kNN runs on the GPU via `cubecl` (backends: Vulkan,
 Metal, DX12 through wgpu, or CUDA). Graph construction, embedding, MST and
 persistence analysis remain on the CPU.
@@ -129,14 +134,14 @@ let result = evoc_gpu::<f32>(
     WgpuDevice::default().into(),
     42,
     1,
-);
+)?;
 
 let labels = result.best_labels();
 ```
 
 A note on precision: GPU computation runs in `f32`. WGSL (the wgpu shader
-language) has no `f64`, and `f64` throughput on consumer GPUs is typically
-1/32 to 1/64 of `f32` regardless. If you need double precision, stick to the
+language) has no `f64`, and `f64` throughput on consumer GPUs is
+1/32 to 1/64 of `f32` regardless. If you need `f64` past the search, stick to the
 CPU path. GPU results are also not bit-reproducible across runs due to
 non-deterministic parallel reduction order; structural quality is consistent.
 
@@ -167,11 +172,11 @@ let result = evoc(
     &nn_params,
     42,
     1,
-);
+)?;
 ```
 
-The search itself runs in `f32` whatever `T` is, so `f64` input loses
-precision in the kNN stage only. `NearestNeighbourParamsEvoc` carries over:
+The search runs in `f32` whatever `T` is, `"exhaustive_mlx"` included.
+`NearestNeighbourParamsEvoc` carries over:
 `n_list` and `n_probes` drive `ivf_mlx`, `delta` drives `nndescent_mlx`. Still experimental; benchmarks against the wgpu path are
 outstanding.
 
@@ -183,7 +188,7 @@ Based on the original EVoC algorithm and Python implementation by
 
 ## Licence
 
-This project is licensed under the MIT Licence for original contributions –
+This project is licensed under the MIT Licence for original contributions,
 see [LICENSE](LICENSE) for details.
 
 Portions of this work are derived from the

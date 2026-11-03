@@ -17,6 +17,11 @@ All seven come from [`ann-search-rs`](https://github.com/GregorLueg/ann-search-r
 where they are documented properly and benchmarked. An `mlx` build on Apple
 Silicon adds three more, see [MLX on Apple Silicon](#mlx-on-apple-silicon).
 
+Every backend bar `exhaustive` searches in float32 whatever you pass in, and the
+distances come back at your dtype. On float64 input that takes 8 to 41% off a
+200k run. The catch: structure below float32 resolution is gone before the search
+sees it, so centre Euclidean data that sits on a huge offset first.
+
 ## Which to use
 
 `nndescent` for anything above roughly 10k points. EVoC wants a self-kNN graph
@@ -76,8 +81,7 @@ evoc_rs.mlx_available()  # True only in an mlx build that found mlx-c
 model = evoc_rs.EVoC(ann_algorithm="nndescent_mlx").fit(X)
 ```
 
-The search runs in float32 whatever you pass in, so float64 input loses
-precision in the kNN stage only; the rest of the pipeline keeps your dtype. No
+The search runs in float32 whatever you pass in, `exhaustive_mlx` included. No
 published wheel carries this, since it links mlx-c dynamically and would only
 import on a Mac that has it. In a build without it, an `*_mlx` name raises with
 a pointer to the build flag rather than the generic "unknown backend" message.
@@ -88,7 +92,7 @@ How it stacks up against `EVoCGpu` on the same Mac is not benchmarked yet.
 `euclidean` or `cosine`. Nothing else, and an unknown string raises rather than
 silently falling back.
 
-Cosine is usually right for embeddings out of a transformer, since the vectors
+Cosine is the right default for embeddings out of a transformer, since the vectors
 carry meaning in direction rather than magnitude. Euclidean is right for
 anything already scaled.
 
