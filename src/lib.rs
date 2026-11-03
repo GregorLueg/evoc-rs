@@ -19,10 +19,7 @@ pub mod nearest_neighbours;
 pub mod prelude;
 pub mod utils;
 
-use ann_search_rs::cpu::hnsw::{HnswIndex, HnswState};
-use ann_search_rs::cpu::nndescent::{NNDescent, NNDescentQuery};
 use ann_search_rs::prelude::AnnSearchFloat;
-use ann_search_rs::utils::nndescent_utils::ApplySortedUpdates;
 use faer::MatRef;
 use std::time::Instant;
 
@@ -222,8 +219,6 @@ pub fn evoc<T>(
 ) -> Result<EvocResult<T>, EvocErrors>
 where
     T: EvocFloat + AnnSearchFloat,
-    NNDescent<T>: ApplySortedUpdates<T> + NNDescentQuery<T>,
-    HnswIndex<T>: HnswState<T>,
 {
     let data_input = data.to_mat_input();
     let data = data_input.as_mat_ref();

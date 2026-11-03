@@ -5,8 +5,7 @@
 //! numpy arrays this returns and Python owns it from there.
 //!
 //! Nothing generic reaches `evoc_rs::evoc`. The dispatch macro expands to
-//! concrete `f32` / `f64` code, so the core's trait bounds
-//! (`NNDescent<T>: ApplySortedUpdates<T>` and friends) never have to be
+//! concrete `f32` / `f64` code, so the core's trait bounds never have to be
 //! restated here, and `ann-search-rs` stays out of this crate's manifest.
 
 use numpy::PyReadonlyArray2;

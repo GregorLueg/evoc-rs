@@ -15,6 +15,7 @@ use evoc_rs::clustering::mst::*;
 use evoc_rs::clustering::persistence::*;
 use evoc_rs::graph::EvocEmbeddingParams;
 use evoc_rs::graph::embedding::*;
+use evoc_rs::nearest_neighbours::nearest_neighbour_cpu::run_ann_search;
 
 /// Two tight clusters far apart. The MST should have exactly one long
 /// inter-cluster edge and all other edges should be short.
@@ -639,10 +640,6 @@ const ACC_FIXTURE: (usize, usize, usize, u64) = (600, 32, 4, 1);
 fn cluster_at<T>(seed: usize) -> (Vec<i64>, usize)
 where
     T: EvocFloat + ann_search_rs::prelude::AnnSearchFloat,
-    ann_search_rs::cpu::nndescent::NNDescent<T>:
-        ann_search_rs::utils::nndescent_utils::ApplySortedUpdates<T>
-            + ann_search_rs::cpu::nndescent::NNDescentQuery<T>,
-    ann_search_rs::cpu::hnsw::HnswIndex<T>: ann_search_rs::cpu::hnsw::HnswState<T>,
 {
     let (n, dim, nc, data_seed) = ACC_FIXTURE;
     let (mat, _) = generate_clustered_data::<T>(n, dim, nc, data_seed);
@@ -708,5 +705,75 @@ fn integration_12_precisions_agree() {
             "seed {seed}: {differing} of {} labels differ between f32 and f64",
             labels_32.len()
         );
+    }
+}
+
+/// Backends that search in `f32` whatever the input precision.
+const F32_BACKENDS: [&str; 6] = ["annoy", "balltree", "hnsw", "ivf", "kmknn", "nndescent"];
+
+/// `f64` input and its `f32` narrowing must give the same neighbours, since both
+/// reach the backend as the same `f32` buffer. HNSW is left out because its
+/// parallel build does not reproduce even against itself at one precision.
+#[test]
+fn integration_13_knn_indices_independent_of_input_precision() {
+    let (n, dim, nc, data_seed) = ACC_FIXTURE;
+    let (mat_64, _) = generate_clustered_data::<f64>(n, dim, nc, data_seed);
+    let mat_32 = faer::Mat::<f32>::from_fn(n, dim, |i, j| mat_64[(i, j)] as f32);
+
+    for backend in F32_BACKENDS.into_iter().filter(|b| *b != "hnsw") {
+        let (idx_64, _) = run_ann_search(
+            mat_64.as_ref(),
+            15,
+            backend.to_string(),
+            &NearestNeighbourParamsEvoc::<f64>::default(),
+            42,
+            0,
+        )
+        .unwrap();
+        let (idx_32, _) = run_ann_search(
+            mat_32.as_ref(),
+            15,
+            backend.to_string(),
+            &NearestNeighbourParamsEvoc::<f32>::default(),
+            42,
+            0,
+        )
+        .unwrap();
+
+        assert_eq!(idx_64, idx_32, "{backend}: neighbours depend on precision");
+    }
+}
+
+/// Points distinct in `f64` but identical in `f32` must not leave self in a row.
+#[test]
+fn integration_14_self_removed_when_narrowing_makes_duplicates() {
+    let n = 200;
+    let dim = 8;
+    let k = 15;
+    // Every point has 4 twins that differ only below f32 resolution.
+    let mat = faer::Mat::<f64>::from_fn(n, dim, |i, j| {
+        let group = (i / 5) as f64;
+        1.0 + group * 0.1 * (j as f64 + 1.0) + (i % 5) as f64 * 1e-12
+    });
+
+    for backend in F32_BACKENDS {
+        let (idx, dist) = run_ann_search(
+            mat.as_ref(),
+            k,
+            backend.to_string(),
+            &NearestNeighbourParamsEvoc::<f64>::default(),
+            42,
+            0,
+        )
+        .unwrap();
+
+        for (i, (row, row_dist)) in idx.iter().zip(&dist).enumerate() {
+            assert!(
+                !row.contains(&i),
+                "{backend}: point {i} is its own neighbour"
+            );
+            assert!(row.len() <= k, "{backend}: row {i} holds {}", row.len());
+            assert_eq!(row.len(), row_dist.len());
+        }
     }
 }
