@@ -32,7 +32,7 @@ mlx = ["ann-search-rs/mlx"]
 ndarray = ["dep:ndarray"]
 
 [dependencies]
-ann-search-rs = "0.12.0"
+ann-search-rs = "0.12"
 ndarray = { version = ">=0.16, <0.18", optional = true }
 approx = "0.5.1"
 faer = "0.24.4"
