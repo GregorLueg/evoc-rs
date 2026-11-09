@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
     
     
       
@@ -828,8 +828,9 @@ extracted count lands near the target, and some data has no setting that hits it
 exactly.</p>
 <h2 id="dtype">dtype<a class="headerlink" href="#dtype" title="Permanent link">&para;</a></h2>
 <p>float32 and float64 both run natively and the output width follows the input.
-Anything else is promoted to float64, never narrowed. If memory is tight, hand
-it float32 yourself.</p>
+Anything else is promoted to float64. The kNN search is the exception: every
+backend bar <code>exhaustive</code> runs it in float32 whatever you pass in, see
+<a href="../backends/">kNN backends</a>. If memory is tight, hand it float32 yourself.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">model</span><span class="o">.</span><span class="n">membership_strengths_</span><span class="o">.</span><span class="n">dtype</span>  <span class="c1"># float32 in, float32 out</span>
 </code></pre></div>
 <h2 id="bring-your-own-graph">Bring your own graph<a class="headerlink" href="#bring-your-own-graph" title="Permanent link">&para;</a></h2>
@@ -915,7 +916,7 @@ backends are seeded too, so the only thing that moves between runs is nothing.</
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "navigation.tracking", "content.code.copy", "content.action.edit", "toc.follow"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
+      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
     
   </body>

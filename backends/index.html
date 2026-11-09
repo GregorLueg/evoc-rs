@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
     
     
       
@@ -791,6 +791,10 @@ expensive stage. <code>ann_algorithm</code> picks how.</p>
 <p>All seven come from <a href="https://github.com/GregorLueg/ann-search-rs"><code>ann-search-rs</code></a>,
 where they are documented properly and benchmarked. An <code>mlx</code> build on Apple
 Silicon adds three more, see <a href="#mlx-on-apple-silicon">MLX on Apple Silicon</a>.</p>
+<p>Every backend bar <code>exhaustive</code> searches in float32 whatever you pass in, and the
+distances come back at your dtype. On float64 input that takes 8 to 41% off a
+200k run. The catch: structure below float32 resolution is gone before the search
+sees it, so centre Euclidean data that sits on a huge offset first.</p>
 <h2 id="which-to-use">Which to use<a class="headerlink" href="#which-to-use" title="Permanent link">&para;</a></h2>
 <p><code>nndescent</code> for anything above roughly 10k points. EVoC wants a self-kNN graph
 for every point, which is exactly what NN-Descent is built for; the graph-based
@@ -876,8 +880,7 @@ installed takes three more <code>ann_algorithm</code> values on the plain <code>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">evoc_rs</span><span class="o">.</span><span class="n">mlx_available</span><span class="p">()</span>  <span class="c1"># True only in an mlx build that found mlx-c</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">model</span> <span class="o">=</span> <span class="n">evoc_rs</span><span class="o">.</span><span class="n">EVoC</span><span class="p">(</span><span class="n">ann_algorithm</span><span class="o">=</span><span class="s2">"nndescent_mlx"</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
 </code></pre></div>
-<p>The search runs in float32 whatever you pass in, so float64 input loses
-precision in the kNN stage only; the rest of the pipeline keeps your dtype. No
+<p>The search runs in float32 whatever you pass in, <code>exhaustive_mlx</code> included. No
 published wheel carries this, since it links mlx-c dynamically and would only
 import on a Mac that has it. In a build without it, an <code>*_mlx</code> name raises with
 a pointer to the build flag rather than the generic "unknown backend" message.
@@ -885,7 +888,7 @@ How it stacks up against <code>EVoCGpu</code> on the same Mac is not benchmarked
 <h2 id="metric">Metric<a class="headerlink" href="#metric" title="Permanent link">&para;</a></h2>
 <p><code>euclidean</code> or <code>cosine</code>. Nothing else, and an unknown string raises rather than
 silently falling back.</p>
-<p>Cosine is usually right for embeddings out of a transformer, since the vectors
+<p>Cosine is the right default for embeddings out of a transformer, since the vectors
 carry meaning in direction rather than magnitude. Euclidean is right for
 anything already scaled.</p>
 <h2 id="skipping-the-stage">Skipping the stage<a class="headerlink" href="#skipping-the-stage" title="Permanent link">&para;</a></h2>
@@ -964,7 +967,7 @@ limited to these seven:</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "navigation.tracking", "content.code.copy", "content.action.edit", "toc.follow"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
+      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
     
   </body>
