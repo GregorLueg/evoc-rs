@@ -93,7 +93,7 @@ fn gpu_integration_02_clusters_ivf() {
     assert!(acc > 0.95, "IVF accuracy {:.3} too low", acc);
 }
 
-/// Dispatch check — all three GPU backends should run without panicking.
+/// Dispatch check: all three GPU backends should run without panicking.
 #[test]
 fn gpu_integration_03_all_backends_dispatch() {
     let (data, _) = make_blobs(100, 3, 8, 20.0, 5.0, 42);
@@ -126,7 +126,7 @@ fn gpu_integration_03_all_backends_dispatch() {
 }
 
 /// GPU result should be structurally consistent with CPU result on the same
-/// data (not identical — GPU isn't bit-reproducible — but similar cluster count
+/// data (not identical, since GPU isn't bit-reproducible, but similar cluster count
 /// and comparable accuracy).
 #[test]
 fn gpu_integration_04_structural_agreement_with_cpu() {
@@ -260,7 +260,7 @@ fn gpu_integration_06_approx_n_clusters() {
 }
 
 /// kNN indices returned from GPU path exclude self (latent run_ann_search_gpu
-/// concern noted elsewhere — verify here at the EVoC boundary).
+/// concern noted elsewhere, so verify here at the EVoC boundary).
 #[test]
 fn gpu_integration_07_knn_no_self() {
     let (data, _) = make_blobs(100, 2, 4, 20.0, 5.0, 42);

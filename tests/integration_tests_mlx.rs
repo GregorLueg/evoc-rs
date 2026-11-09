@@ -105,7 +105,7 @@ fn mlx_integration_03_exhaustive_matches_cpu() {
     let mut hits = 0;
     for i in 0..n {
         hits += idx_mlx[i].iter().filter(|j| idx_cpu[i].contains(j)).count();
-        // The k-th distance is robust to ties swapping neighbours.
+        // Ties swapping neighbours leave the k-th distance alone.
         let (a, b) = (dist_cpu[i][k - 1], dist_mlx[i][k - 1]);
         assert!(
             (a - b).abs() <= 1e-3 * a.max(1.0),

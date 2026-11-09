@@ -1,6 +1,6 @@
 [package]
 name = "evoc-rs"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2024"
 authors = ["Gregor Lueg <gregorlueg@me.com>"]
 license = "MIT AND BSD-2-Clause"
@@ -14,7 +14,7 @@ name = "evoc_rs"
 path = "src/lib.rs"
 
 [features]
-## Enable GPU-accelerated approximate nearest neighbour search for the kNN stage
+## GPU approximate nearest neighbour search for the kNN stage
 gpu = ["ann-search-rs/gpu", "cubecl", "cubecl-utils-rs"]
 ## Experimental, Apple Silicon only: MLX kNN backends via mlx-c, as the
 ## `*_mlx` `ann_type`s of `evoc`.
@@ -32,7 +32,7 @@ mlx = ["ann-search-rs/mlx"]
 ndarray = ["dep:ndarray"]
 
 [dependencies]
-ann-search-rs = "0.12.0"
+ann-search-rs = "0.12"
 ndarray = { version = ">=0.16, <0.18", optional = true }
 approx = "0.5.1"
 faer = "0.24.4"

@@ -19,7 +19,7 @@ use crate::prelude::*;
 
 /// Run the EVoC node embedding via parallel Adam.
 ///
-/// Takes a weighted adjacency list (typically from
+/// Takes a weighted adjacency list (such as from
 /// `build_fuzzy_simplicial_set`) and produces a low-dimensional embedding for
 /// subsequent density-based clustering.
 ///
@@ -36,7 +36,7 @@ use crate::prelude::*;
 /// ### Params
 ///
 /// * `graph` - Weighted adjacency list; `graph[i]` contains `(j, weight)` pairs
-/// * `n_components` - Embedding dimensionality (typically 4-16 for EVoC)
+/// * `n_components` - Embedding dimensionality (4-16 by default for EVoC)
 /// * `params` - Optimiser and kernel hyperparameters
 /// * `initial_embedding` - Optional starting coordinates; random if `None`
 /// * `seed` - RNG seed for reproducibility

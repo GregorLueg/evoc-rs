@@ -14,9 +14,10 @@ use rayon::prelude::*;
 
 /// Drop self from self-query results and cap every row at `k`.
 ///
-/// The f32 device backends answer a self-query with `k + 1` rows that usually,
-/// but not always, lead with the point itself. Filtering by index rather than
-/// position covers both cases.
+/// A self-query answers with `k + 1` rows that usually, but not always, lead
+/// with the point itself: an exact duplicate can rank first, and `f32` makes
+/// duplicates of points that are distinct in `f64`. Filtering by index rather
+/// than position covers both cases.
 ///
 /// ### Params
 ///
@@ -27,7 +28,6 @@ use rayon::prelude::*;
 /// ### Returns
 ///
 /// `(knn_indices, knn_dist)` excluding self, at most `k` per row.
-#[cfg(any(feature = "gpu", mlx_available))]
 pub(crate) fn strip_self<T>(
     knn_indices: Vec<Vec<usize>>,
     knn_dist: Vec<Vec<T>>,

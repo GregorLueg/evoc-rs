@@ -19,10 +19,7 @@ pub mod nearest_neighbours;
 pub mod prelude;
 pub mod utils;
 
-use ann_search_rs::cpu::hnsw::{HnswIndex, HnswState};
-use ann_search_rs::cpu::nndescent::{NNDescent, NNDescentQuery};
 use ann_search_rs::prelude::AnnSearchFloat;
-use ann_search_rs::utils::nndescent_utils::ApplySortedUpdates;
 use faer::MatRef;
 use std::time::Instant;
 
@@ -179,31 +176,32 @@ impl<T: EvocFloat> EvocResult<T> {
 
 /// Run EVoC clustering on high-dimensional embedding data.
 ///
-/// 1. **kNN graph** — builds an approximate nearest-neighbour graph via the
+/// 1. **kNN graph**: builds an approximate nearest-neighbour graph via the
 ///    selected ANN backend (`ann_type`), or uses `precomputed_knn` if
-///    provided.
-/// 2. **Fuzzy simplicial set** — smooths and optionally symmetrises the kNN
+///    provided. Every backend bar `"exhaustive"` searches in `f32` whatever
+///    `T` is.
+/// 2. **Fuzzy simplicial set**: smooths and optionally symmetrises the kNN
 ///    graph into a weighted undirected graph.
-/// 3. **Node embedding** — optimises a low-dimensional layout using the EVoC
+/// 3. **Node embedding**: optimises a low-dimensional layout using the EVoC
 ///    gradient (a modified UMAP repulsion term controlled by `noise_level`).
-/// 4. **MST** — builds a minimum spanning tree over the embedding using
+/// 4. **MST**: builds a minimum spanning tree over the embedding using
 ///    mutual reachability distances.
-/// 5. **Cluster layers** — extracts a hierarchy of clusterings from the MST
+/// 5. **Cluster layers**: extracts a hierarchy of clusterings from the MST
 ///    via persistence analysis, or searches for a fixed number of clusters if
 ///    [`EvocParams::approx_n_clusters`] is set.
 ///
 /// ### Params
 ///
-/// * `data` — input data as samples x features. Accepts a faer matrix, an
+/// * `data` - input data as samples x features. Accepts a faer matrix, an
 ///   ndarray 2-D array (with the `ndarray` feature) or a row-major
 ///   `(&[T], n_samples, n_features)` tuple. See [`EvocMatrix`].
-/// * `ann_type` — ANN backend identifier (e.g. `"nndescent"`, `"hnsw"`).
-/// * `precomputed_knn` — pre-built `(indices, distances)` pair; pass `None`
+/// * `ann_type` - ANN backend identifier (e.g. `"nndescent"`, `"hnsw"`).
+/// * `precomputed_knn` - pre-built `(indices, distances)` pair; pass `None`
 ///   to build the graph from `data`.
-/// * `evoc_params` — clustering hyperparameters; see [`EvocParams`].
-/// * `nn_params` — hyperparameters forwarded to the ANN backend, see
+/// * `evoc_params` - clustering hyperparameters; see [`EvocParams`].
+/// * `nn_params` - hyperparameters forwarded to the ANN backend, see
 ///   [`NearestNeighbourParamsEvoc`]
-/// * `seed` — random seed for reproducibility.
+/// * `seed` - random seed for reproducibility.
 /// * `verbose` - If `0` -> silent or `1` for normal verbosity, `2` for detailed
 ///   verbosity.
 ///
@@ -222,8 +220,6 @@ pub fn evoc<T>(
 ) -> Result<EvocResult<T>, EvocErrors>
 where
     T: EvocFloat + AnnSearchFloat,
-    NNDescent<T>: ApplySortedUpdates<T> + NNDescentQuery<T>,
-    HnswIndex<T>: HnswState<T>,
 {
     let data_input = data.to_mat_input();
     let data = data_input.as_mat_ref();
@@ -425,9 +421,9 @@ where
 ///
 /// ### Params
 ///
-/// * `embedding` — low-dimensional node positions, one `Vec<T>` per point.
-/// * `min_samples` — passed to [`build_mst`] for core-distance estimation.
-/// * `target_k` — desired number of clusters.
+/// * `embedding` - low-dimensional node positions, one `Vec<T>` per point.
+/// * `min_samples` - passed to [`build_mst`] for core-distance estimation.
+/// * `target_k` - desired number of clusters.
 ///
 /// ### Returns
 ///
@@ -518,18 +514,18 @@ where
 ///
 /// ### Params
 ///
-/// * `data` — input data as samples x features. Accepts a faer matrix, an
+/// * `data` - input data as samples x features. Accepts a faer matrix, an
 ///   ndarray 2-D array (with the `ndarray` feature) or a row-major
 ///   `(&[T], n_samples, n_features)` tuple. See [`EvocMatrix`].
-/// * `ann_type` — GPU ANN backend: `"exhaustive_gpu"`, `"ivf_gpu"` or
+/// * `ann_type` - GPU ANN backend: `"exhaustive_gpu"`, `"ivf_gpu"` or
 ///   `"nndescent_gpu"`.
-/// * `precomputed_knn` — pre-built `(indices, distances)` pair; pass `None`
+/// * `precomputed_knn` - pre-built `(indices, distances)` pair; pass `None`
 ///   to build the graph on the GPU.
-/// * `evoc_params` — clustering hyperparameters; see [`EvocParams`].
-/// * `nn_params` — GPU nearest-neighbour search parameters, see
+/// * `evoc_params` - clustering hyperparameters; see [`EvocParams`].
+/// * `nn_params` - GPU nearest-neighbour search parameters, see
 ///   [`NearestNeighbourParamsGpuEvoc`].
-/// * `device` — GPU device.
-/// * `seed` — random seed for reproducibility.
+/// * `device` - GPU device.
+/// * `seed` - random seed for reproducibility.
 /// * `verbose` - If `0` -> silent or `1` for normal verbosity, `2` for detailed
 ///   verbosity.
 ///

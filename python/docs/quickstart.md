@@ -46,8 +46,9 @@ exactly.
 ## dtype
 
 float32 and float64 both run natively and the output width follows the input.
-Anything else is promoted to float64, never narrowed. If memory is tight, hand
-it float32 yourself.
+Anything else is promoted to float64. The kNN search is the exception: every
+backend bar `exhaustive` runs it in float32 whatever you pass in, see
+[kNN backends](backends.md). If memory is tight, hand it float32 yourself.
 
 ```python
 model.membership_strengths_.dtype  # float32 in, float32 out

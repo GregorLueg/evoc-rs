@@ -346,7 +346,7 @@ where
 ///
 /// ### Returns
 ///
-/// `(labels, strengths)` — cluster label per point (`-1` = noise) and
+/// `(labels, strengths)`: cluster label per point (`-1` = noise) and
 /// membership strength in `[0, 1]` per point
 pub fn extract_clusters_at_size<T>(
     tree: &CondensedTree<T>,
@@ -381,7 +381,7 @@ where
 ///
 /// ### Params
 ///
-/// * `embedding` - Point coordinates; typically the EVoC embedding
+/// * `embedding` - Point coordinates, such as the EVoC embedding
 /// * `min_samples` - Neighbourhood size for core-distance computation in the
 ///   MST
 /// * `base_min_cluster_size` - Minimum cluster size for the base condensed tree
@@ -392,7 +392,7 @@ where
 ///
 /// ### Returns
 ///
-/// `(labels, strengths, persistence)` — parallel vecs of length ≤ `max_layers`;
+/// `(labels, strengths, persistence)`: parallel vecs of length ≤ `max_layers`;
 /// each entry is one clustering layer. `persistence[0]` is always `0.0` for the
 /// base layer; remaining entries are the raw persistence values of the selected
 /// peaks

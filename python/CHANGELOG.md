@@ -3,6 +3,25 @@
 Changes to the `evoc-rs` Python package. The Rust crate it wraps, `evoc-rs`, has
 its own changelog at [`../CHANGELOG.md`](../CHANGELOG.md).
 
+## 0.4.0
+
+Requires `evoc-rs` 0.7.0.
+
+**Breaking changes**
+
+- `EVoC` searches in float32 whatever you pass in, on every `ann_algorithm` bar
+  `exhaustive`. float64 input gives different results than 0.3.0 at the same
+  seed. The output dtype still follows the input.
+
+**Bug fixes**
+
+- An exact duplicate ranked first no longer leaves a point as its own neighbour.
+
+**Performance**
+
+- On float64 input at 200k points, the kNN stage is 1.3 to 2.7x faster and the
+  whole run 8 to 41%. float32 input and peak memory do not change.
+
 ## 0.3.0
 
 Requires `evoc-rs` 0.6.0.

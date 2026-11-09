@@ -48,7 +48,7 @@ scikit-learn being an install requirement.
 
 Most clustering libraries hand you one labelling. EVoC hands you several, one
 per granularity, ranked by how stable each is. `labels_` picks the most
-persistent for you, but the interesting bit is often a layer or two either side:
+persistent for you, but the interesting bit can be a layer or two either side:
 
 ```python
 for layer, score in zip(model.cluster_layers_, model.persistence_scores_):

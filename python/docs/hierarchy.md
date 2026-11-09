@@ -59,8 +59,8 @@ whatever the hierarchy happened to produce.
 `-1` is noise, the HDBSCAN convention. Points land there when they sit in a
 low-density region the condensed tree never assigned to a cluster. Noise
 fraction climbs with `base_min_cluster_size` and with `min_samples`, so a
-labelling that is 40% noise usually means one of those is too high for the
-data rather than that the data has no structure.
+labelling that is 40% noise points at one of those being too high for the data,
+not at data with no structure.
 
 `membership_strengths_` is `0.0` on noise points and in `[0, 1]` elsewhere. Use
 it to threshold soft assignments:
