@@ -827,7 +827,7 @@ alongside the clustering parameters. Only the ones matching your
 </tr>
 <tr>
 <td><code>nndescent</code></td>
-<td><code>delta</code></td>
+<td><code>delta</code>, <code>nnd_n_trees</code></td>
 </tr>
 <tr>
 <td><code>balltree</code></td>
@@ -835,11 +835,15 @@ alongside the clustering parameters. Only the ones matching your
 </tr>
 <tr>
 <td><code>ivf</code>, <code>ivf_mlx</code></td>
-<td><code>n_list</code>, <code>n_probes</code></td>
+<td><code>n_list</code>, <code>n_probes</code>, <code>k_means</code></td>
+</tr>
+<tr>
+<td><code>kmknn</code></td>
+<td><code>n_list</code>, <code>k_means</code></td>
 </tr>
 <tr>
 <td><code>nndescent_mlx</code></td>
-<td><code>delta</code></td>
+<td><code>delta</code>, <code>nnd_n_trees</code></td>
 </tr>
 </tbody>
 </table>
@@ -848,7 +852,9 @@ alongside the clustering parameters. Only the ones matching your
 EVoC wants. So the <code>nndescent</code> backends build the graph with <code>n_neighbours</code> per
 point and hand it straight back. No index, no beam search, no query knobs.</p>
 <p><code>None</code> on any optional knob means the crate picks. <code>n_list</code> defaults to
-<code>sqrt(n)</code> and <code>n_probes</code> to <code>sqrt(n_list)</code>.</p>
+<code>sqrt(n)</code>, <code>n_probes</code> to <code>sqrt(n_list)</code> and <code>nnd_n_trees</code> to <code>5 + sqrt(n) / 20</code>,
+capped at 64. <code>k_means</code> picks the k-means behind the centroids, <code>"emeans"</code>
+(default) or <code>"lloyd"</code>.</p>
 <h2 id="mlx-on-apple-silicon">MLX on Apple Silicon<a class="headerlink" href="#mlx-on-apple-silicon" title="Permanent link">&para;</a></h2>
 <p>Experimental. A wheel built with the <code>mlx</code> feature on a Mac with mlx-c
 installed takes three more <code>ann_algorithm</code> values on the plain <code>EVoC</code>:</p>
