@@ -10,7 +10,7 @@ use cubecl::Device;
 use cubecl_utils_rs::CubeclFloat;
 use faer::MatRef;
 
-use crate::nearest_neighbours::{knn_graph_to_rows, rescale_distances, strip_self};
+use crate::nearest_neighbours::{knn_graph_to_rows, parse_k_means, rescale_distances, strip_self};
 use crate::prelude::*;
 
 /////////////
@@ -41,6 +41,9 @@ pub struct NearestNeighbourParamsGpuEvoc<T> {
     /// IVF-GPU: Number of lists to probes. If not provided, will default to
     /// to `sqrt(n_list)` lists.
     pub n_probes: Option<usize>,
+    /// IVF-GPU: k-means algorithm training the centroids, `"emeans"`
+    /// (default) or `"lloyd"`.
+    pub k_means: String,
     /// NNDescent-GPU: Internal working degree of the descent. If `None`, the
     /// ann-search-rs crate defaults to `1.5 * k` with `k` the number of
     /// neighbours requested.
@@ -74,6 +77,8 @@ impl<T> NearestNeighbourParamsGpuEvoc<T> {
     /// * `n_list` - Number of clusters. Defaults to `sqrt(n)`.
     /// * `n_probes` - Number of clusters to probe during querying. Defaults
     ///   to `sqrt(n_list)`.
+    /// * `k_means` - k-means algorithm for the centroids, `"emeans"` or
+    ///   `"lloyd"`.
     ///
     /// **NNDescent-GPU**
     ///
@@ -90,6 +95,7 @@ impl<T> NearestNeighbourParamsGpuEvoc<T> {
         // ivf-gpu
         n_list: Option<usize>,
         n_probes: Option<usize>,
+        k_means: String,
         // nndescent-gpu
         build_k: Option<usize>,
         max_iters: Option<usize>,
@@ -102,6 +108,7 @@ impl<T> NearestNeighbourParamsGpuEvoc<T> {
             dist_metric,
             n_list,
             n_probes,
+            k_means,
             build_k,
             max_iters,
             n_tree,
@@ -128,6 +135,7 @@ where
             // ivf-gpu
             n_list: None,
             n_probes: None,
+            k_means: "emeans".to_string(),
             // nndescent-gpu
             build_k: None,
             max_iters: None,
@@ -222,7 +230,7 @@ where
             let index = build_ivf_index_gpu::<T>(
                 data,
                 params_nn.n_list,
-                None,
+                Some(KMeansGpuParams::default().with_algorithm(parse_k_means(&params_nn.k_means))),
                 dist_metric,
                 seed,
                 verbosity,

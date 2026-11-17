@@ -4,9 +4,39 @@ pub mod nearest_neighbour_cpu;
 #[cfg(feature = "gpu")]
 pub mod nearest_neighbour_gpu;
 
-use ann_search_rs::prelude::{KNN_GRAPH_EMPTY, KnnGraph};
+use ann_search_rs::prelude::{KMeansAlgorithm, KNN_GRAPH_EMPTY, KnnGraph};
 use num_traits::Float;
 use rayon::prelude::*;
+
+/////////////
+// k-means //
+/////////////
+
+/// Parse the k-means algorithm training the IVF-family centroids.
+///
+/// Unrecognised keys warn and fall back to e-means, as unknown `ann_type` keys
+/// do.
+///
+/// ### Params
+///
+/// * `s` - `"emeans"` or `"lloyd"`
+///
+/// ### Returns
+///
+/// The [`KMeansAlgorithm`] at the ann-search-rs defaults.
+pub(crate) fn parse_k_means(s: &str) -> KMeansAlgorithm {
+    match s.to_lowercase().as_str() {
+        "emeans" | "e-means" => KMeansAlgorithm::default(),
+        "lloyd" => KMeansAlgorithm::Lloyd,
+        _ => {
+            println!(
+                "Unrecognised k-means algorithm provided: {:?}. Default to e-means.",
+                s
+            );
+            KMeansAlgorithm::default()
+        }
+    }
+}
 
 /////////////////
 // Self filter //

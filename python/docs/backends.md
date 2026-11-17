@@ -48,7 +48,8 @@ alongside the clustering parameters. Only the ones matching your
 | `hnsw` | `m`, `ef_construction`, `ef_search` |
 | `nndescent` | `delta`, `nnd_n_trees` |
 | `balltree` | `bt_budget` |
-| `ivf`, `ivf_mlx` | `n_list`, `n_probes` |
+| `ivf`, `ivf_mlx` | `n_list`, `n_probes`, `k_means` |
+| `kmknn` | `n_list`, `k_means` |
 | `nndescent_mlx` | `delta`, `nnd_n_trees` |
 
 ### NN-Descent builds the graph, nothing else
@@ -59,7 +60,8 @@ point and hand it straight back. No index, no beam search, no query knobs.
 
 `None` on any optional knob means the crate picks. `n_list` defaults to
 `sqrt(n)`, `n_probes` to `sqrt(n_list)` and `nnd_n_trees` to `5 + sqrt(n) / 20`,
-capped at 64.
+capped at 64. `k_means` picks the k-means behind the centroids, `"emeans"`
+(default) or `"lloyd"`.
 
 ## MLX on Apple Silicon
 

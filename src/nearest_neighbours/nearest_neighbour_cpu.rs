@@ -8,7 +8,7 @@ use num_traits::Float;
 use rayon::prelude::*;
 use std::default::Default;
 
-use crate::nearest_neighbours::{knn_graph_to_rows, rescale_distances, strip_self};
+use crate::nearest_neighbours::{knn_graph_to_rows, parse_k_means, rescale_distances, strip_self};
 use crate::prelude::*;
 
 /////////////
@@ -76,6 +76,9 @@ pub struct NearestNeighbourParamsEvoc<T> {
     /// IVF: Number of lists to probes. If not provided, will default to
     /// to `sqrt(n_list)` lists.
     pub n_probes: Option<usize>,
+    /// IVF / KmKNN: k-means algorithm training the centroids, `"emeans"`
+    /// (default) or `"lloyd"`.
+    pub k_means: String,
 }
 
 impl<T> NearestNeighbourParamsEvoc<T> {
@@ -115,6 +118,8 @@ impl<T> NearestNeighbourParamsEvoc<T> {
     ///
     /// * `n_list` - Number of lists to use for IVF
     /// * `n_probes` - Number of lists/clusters to probe during querying
+    /// * `k_means` - k-means algorithm for the centroids, `"emeans"` or
+    ///   `"lloyd"`. Also used by KmKNN.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         dist_metric: String,
@@ -133,6 +138,7 @@ impl<T> NearestNeighbourParamsEvoc<T> {
         // ivf / kmknn
         n_list: Option<usize>,
         n_probes: Option<usize>,
+        k_means: String,
     ) -> Self {
         Self {
             dist_metric,
@@ -146,6 +152,7 @@ impl<T> NearestNeighbourParamsEvoc<T> {
             bt_budget,
             n_list,
             n_probes,
+            k_means,
         }
     }
 }
@@ -177,6 +184,7 @@ where
             // ivf
             n_list: None,
             n_probes: None,
+            k_means: "emeans".to_string(),
         }
     }
 }
@@ -335,6 +343,8 @@ where
     });
 
     let dist_metric = &params_nn.dist_metric;
+    let k_means_params =
+        KMeansTrainingParams::default().with_algorithm(parse_k_means(&params_nn.k_means));
 
     // Self-queries return `k + 1` rows holding the point itself. The NNDescent
     // builders return the kNN graph directly, which holds no self-edge.
@@ -431,7 +441,7 @@ where
             let index = build_ivf_index::<f32>(
                 cast_matrix_to_fp32(data),
                 params_nn.n_list,
-                None,
+                Some(k_means_params),
                 dist_metric,
                 seed,
                 verbosity,
@@ -453,7 +463,7 @@ where
                 cast_matrix_to_fp32(data),
                 dist_metric,
                 params_nn.n_list,
-                None,
+                Some(k_means_params),
                 seed,
                 verbosity,
             )?;
@@ -483,7 +493,7 @@ where
             let index = build_ivf_index_mlx(
                 cast_matrix_to_fp32(data),
                 params_nn.n_list,
-                None,
+                Some(k_means_params),
                 dist_metric,
                 seed,
                 verbosity,

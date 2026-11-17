@@ -17,6 +17,8 @@ Requires `evoc-rs` 0.8.0.
 
 - `EVoC(nnd_n_trees=...)` sets the trees seeding `nndescent` and
   `nndescent_mlx`. None keeps the crate default.
+- `EVoC(k_means=...)` and `EVoCGpu(k_means=...)` pick `"emeans"` (default) or
+  `"lloyd"` for the IVF-family backends and `kmknn`.
 
 ## 0.4.0
 

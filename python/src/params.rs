@@ -109,6 +109,8 @@ pub(crate) struct NnArgs {
     pub n_list: Option<usize>,
     /// IVF: number of lists to probe.
     pub n_probes: Option<usize>,
+    /// IVF / KmKNN: k-means algorithm, `"emeans"` or `"lloyd"`.
+    pub k_means: String,
 }
 
 impl NnArgs {
@@ -130,6 +132,7 @@ impl NnArgs {
             bt_budget: T::from(self.bt_budget).unwrap(),
             n_list: self.n_list,
             n_probes: self.n_probes,
+            k_means: self.k_means.clone(),
         }
     }
 }

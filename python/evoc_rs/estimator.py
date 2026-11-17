@@ -74,6 +74,8 @@ class EVoC(BaseEstimator):
         bt_budget: BallTree search budget, as a fraction of the sample count.
         n_list: IVF cells. None uses sqrt(n).
         n_probes: IVF cells probed per query. None uses sqrt(n_list).
+        k_means: k-means training the centroids for ivf, ivf_mlx and kmknn,
+            emeans or lloyd.
         seed: Random seed.
         verbose: 0 silent, 1 normal, 2 detailed.
 
@@ -131,6 +133,7 @@ class EVoC(BaseEstimator):
         bt_budget: float = 0.05,
         n_list: int | None = None,
         n_probes: int | None = None,
+        k_means: str = "emeans",
         seed: int = 42,
         verbose: int = 0,
     ) -> None:
@@ -157,6 +160,7 @@ class EVoC(BaseEstimator):
         self.bt_budget = bt_budget
         self.n_list = n_list
         self.n_probes = n_probes
+        self.k_means = k_means
         self.seed = seed
         self.verbose = verbose
 
@@ -206,6 +210,7 @@ class EVoC(BaseEstimator):
             bt_budget=self.bt_budget,
             n_list=self.n_list,
             n_probes=self.n_probes,
+            k_means=self.k_means,
             seed=self.seed,
             verbose=self.verbose,
         )
@@ -308,6 +313,7 @@ class EVoCGpu(EVoC):
         n_tree: Trees initialising the kNN graph. None uses the crate default.
         rho: NN-Descent sampling rate. None auto-picks.
         refine_knn: 2-hop refinement sweeps after the descent. None runs none.
+        k_means: k-means training the ivf_gpu centroids, emeans or lloyd.
     """
 
     _BACKENDS: ClassVar[frozenset[str]] = GPU_BACKENDS
@@ -332,6 +338,7 @@ class EVoCGpu(EVoC):
         metric: str = "euclidean",
         n_list: int | None = None,
         n_probes: int | None = None,
+        k_means: str = "emeans",
         build_k: int | None = None,
         max_iters: int | None = None,
         n_tree: int | None = None,
@@ -356,6 +363,7 @@ class EVoCGpu(EVoC):
         self.metric = metric
         self.n_list = n_list
         self.n_probes = n_probes
+        self.k_means = k_means
         self.build_k = build_k
         self.max_iters = max_iters
         self.n_tree = n_tree
@@ -401,6 +409,7 @@ class EVoCGpu(EVoC):
             dist_metric=self.metric,
             n_list=self.n_list,
             n_probes=self.n_probes,
+            k_means=self.k_means,
             build_k=self.build_k,
             max_iters=self.max_iters,
             n_tree=self.n_tree,
