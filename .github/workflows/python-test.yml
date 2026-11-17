@@ -18,6 +18,7 @@ on:
       - 'src/**'
       - 'Cargo.toml'
       - '.github/workflows/python-test.yml'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
