@@ -37,6 +37,8 @@ struct NnGpuArgs {
     n_list: Option<usize>,
     /// IVF-GPU: number of lists to probe.
     n_probes: Option<usize>,
+    /// IVF-GPU: k-means algorithm, `"emeans"` or `"lloyd"`.
+    k_means: String,
     /// NNDescent-GPU: internal working degree.
     build_k: Option<usize>,
     /// NNDescent-GPU: maximum iterations.
@@ -58,6 +60,7 @@ impl NnGpuArgs {
             dist_metric: self.dist_metric.clone(),
             n_list: self.n_list,
             n_probes: self.n_probes,
+            k_means: self.k_means.clone(),
             build_k: self.build_k,
             max_iters: self.max_iters,
             n_tree: self.n_tree,
@@ -99,6 +102,7 @@ impl NnGpuArgs {
     dist_metric,
     n_list,
     n_probes,
+    k_means,
     build_k,
     max_iters,
     n_tree,
@@ -128,6 +132,7 @@ pub(crate) fn run_evoc_gpu<'py>(
     dist_metric: String,
     n_list: Option<usize>,
     n_probes: Option<usize>,
+    k_means: String,
     build_k: Option<usize>,
     max_iters: Option<usize>,
     n_tree: Option<usize>,
@@ -158,6 +163,7 @@ pub(crate) fn run_evoc_gpu<'py>(
         dist_metric,
         n_list,
         n_probes,
+        k_means,
         build_k,
         max_iters,
         n_tree,

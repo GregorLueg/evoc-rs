@@ -176,9 +176,9 @@ let result = evoc(
 ```
 
 The search runs in `f32` whatever `T` is, `"exhaustive_mlx"` included.
-`NearestNeighbourParamsEvoc` carries over:
-`n_list` and `n_probes` drive `ivf_mlx`, `delta` drives `nndescent_mlx`. Still experimental; benchmarks against the wgpu path are
-outstanding.
+`NearestNeighbourParamsEvoc` carries over: `n_list`, `n_probes` and `k_means`
+drive `ivf_mlx`, `delta` and `nnd_n_trees` drive `nndescent_mlx`. Still experimental;
+benchmarks against the wgpu path are outstanding.
 
 ## Credits
 

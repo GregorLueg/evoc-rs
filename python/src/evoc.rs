@@ -102,9 +102,11 @@ macro_rules! evoc_arm {
     ef_construction,
     ef_search,
     delta,
+    nnd_n_trees,
     bt_budget,
     n_list,
     n_probes,
+    k_means,
     seed = 42,
     verbose = 0,
 ))]
@@ -132,9 +134,11 @@ pub(crate) fn run_evoc<'py>(
     ef_construction: usize,
     ef_search: usize,
     delta: f64,
+    nnd_n_trees: Option<usize>,
     bt_budget: f64,
     n_list: Option<usize>,
     n_probes: Option<usize>,
+    k_means: String,
     seed: usize,
     verbose: usize,
 ) -> PyResult<Bound<'py, PyAny>> {
@@ -159,9 +163,11 @@ pub(crate) fn run_evoc<'py>(
         ef_construction,
         ef_search,
         delta,
+        nnd_n_trees,
         bt_budget,
         n_list,
         n_probes,
+        k_means,
     };
 
     if let Ok(a) = x.extract::<PyReadonlyArray2<'_, f32>>() {

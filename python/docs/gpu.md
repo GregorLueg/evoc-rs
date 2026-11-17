@@ -46,7 +46,7 @@ before you commit to it.
 | `exhaustive_gpu` | Exact. Where the GPU wins by the largest margin. |
 | `nndescent_gpu` | NN-Descent on device, handing back the kNN graph directly. |
 
-Knobs are `n_list` and `n_probes` for `ivf_gpu`, and `build_k`, `max_iters`,
+Knobs are `n_list`, `n_probes` and `k_means` for `ivf_gpu`, and `build_k`, `max_iters`,
 `n_tree`, `delta`, `rho` and `refine_knn` for `nndescent_gpu`.
 
 `nndescent_gpu` builds the graph with `n_neighbours` per point and returns it,

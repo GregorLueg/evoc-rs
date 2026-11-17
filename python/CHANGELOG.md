@@ -3,6 +3,23 @@
 Changes to the `evoc-rs` Python package. The Rust crate it wraps, `evoc-rs`, has
 its own changelog at [`../CHANGELOG.md`](../CHANGELOG.md).
 
+## 0.5.0
+
+Requires `evoc-rs` 0.8.0.
+
+**Breaking changes**
+
+- `ivf`, `kmknn`, `ivf_mlx` and `ivf_gpu` train their centroids with e-means
+  and give different results than 0.4.0 at the same seed. `nndescent`
+  distances can differ at rounding level.
+
+**Features**
+
+- `EVoC(nnd_n_trees=...)` sets the trees seeding `nndescent` and
+  `nndescent_mlx`. None keeps the crate default.
+- `EVoC(k_means=...)` and `EVoCGpu(k_means=...)` pick `"emeans"` (default) or
+  `"lloyd"` for the IVF-family backends and `kmknn`.
+
 ## 0.4.0
 
 Requires `evoc-rs` 0.7.0.

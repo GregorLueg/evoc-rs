@@ -101,12 +101,16 @@ pub(crate) struct NnArgs {
     pub ef_search: usize,
     /// NNDescent: convergence criterion.
     pub delta: f64,
+    /// NNDescent: trees seeding the graph.
+    pub nnd_n_trees: Option<usize>,
     /// BallTree: proportion of N to search.
     pub bt_budget: f64,
     /// IVF: number of lists.
     pub n_list: Option<usize>,
     /// IVF: number of lists to probe.
     pub n_probes: Option<usize>,
+    /// IVF / KmKNN: k-means algorithm, `"emeans"` or `"lloyd"`.
+    pub k_means: String,
 }
 
 impl NnArgs {
@@ -124,9 +128,11 @@ impl NnArgs {
             ef_construction: self.ef_construction,
             ef_search: self.ef_search,
             delta: T::from(self.delta).unwrap(),
+            nnd_n_trees: self.nnd_n_trees,
             bt_budget: T::from(self.bt_budget).unwrap(),
             n_list: self.n_list,
             n_probes: self.n_probes,
+            k_means: self.k_means.clone(),
         }
     }
 }
