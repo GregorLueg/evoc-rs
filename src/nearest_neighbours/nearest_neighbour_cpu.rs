@@ -65,6 +65,9 @@ pub struct NearestNeighbourParamsEvoc<T> {
     /// NNDescent: convergence criterium. If less than these percentage of
     /// neighbours have been udpated, the algorithm counts as converged.
     pub delta: T,
+    /// NNDescent: number of trees seeding the graph. `None` uses the backend's
+    /// default: `5 + sqrt(n) / 20`, capped at 64 (the umap-learn / scanpy rule).
+    pub nnd_n_trees: Option<usize>,
     /// BallTree: Proportions of N to search in the BallTree
     pub bt_budget: T,
     /// IVF: Number of lists, clusters to use. If not provided, will default
@@ -101,6 +104,8 @@ impl<T> NearestNeighbourParamsEvoc<T> {
     /// **NN Descent**
     ///
     /// * `delta` - Early termination criterium.
+    /// * `nnd_n_trees` - Trees seeding the graph. `None` for the backend's
+    ///   default.
     ///
     /// **BallTree**
     ///
@@ -122,6 +127,7 @@ impl<T> NearestNeighbourParamsEvoc<T> {
         ef_search: usize,
         // nndescent
         delta: T,
+        nnd_n_trees: Option<usize>,
         // balltree
         bt_budget: T,
         // ivf / kmknn
@@ -136,6 +142,7 @@ impl<T> NearestNeighbourParamsEvoc<T> {
             ef_construction,
             ef_search,
             delta,
+            nnd_n_trees,
             bt_budget,
             n_list,
             n_probes,
@@ -164,6 +171,7 @@ where
             ef_search: 100,
             // nndescent
             delta: T::from(0.001).unwrap(),
+            nnd_n_trees: None,
             // balltree
             bt_budget: T::from(0.1).unwrap(),
             // ivf
@@ -377,7 +385,7 @@ where
                 k,
                 None,
                 None,
-                None,
+                params_nn.nnd_n_trees,
                 params_nn.delta.to_f64().unwrap(),
                 false,
                 true,
@@ -501,7 +509,7 @@ where
                 Some(k),
                 None,
                 None,
-                None,
+                params_nn.nnd_n_trees,
                 params_nn.delta.to_f32(),
                 None,
                 None,

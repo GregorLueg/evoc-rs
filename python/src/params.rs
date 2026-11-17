@@ -124,6 +124,7 @@ impl NnArgs {
             ef_construction: self.ef_construction,
             ef_search: self.ef_search,
             delta: T::from(self.delta).unwrap(),
+            nnd_n_trees: None,
             bt_budget: T::from(self.bt_budget).unwrap(),
             n_list: self.n_list,
             n_probes: self.n_probes,
