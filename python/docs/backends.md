@@ -46,10 +46,10 @@ alongside the clustering parameters. Only the ones matching your
 | --- | --- |
 | `annoy` | `n_tree`, `search_budget` |
 | `hnsw` | `m`, `ef_construction`, `ef_search` |
-| `nndescent` | `delta` |
+| `nndescent` | `delta`, `nnd_n_trees` |
 | `balltree` | `bt_budget` |
 | `ivf`, `ivf_mlx` | `n_list`, `n_probes` |
-| `nndescent_mlx` | `delta` |
+| `nndescent_mlx` | `delta`, `nnd_n_trees` |
 
 ### NN-Descent builds the graph, nothing else
 
@@ -58,7 +58,8 @@ EVoC wants. So the `nndescent` backends build the graph with `n_neighbours` per
 point and hand it straight back. No index, no beam search, no query knobs.
 
 `None` on any optional knob means the crate picks. `n_list` defaults to
-`sqrt(n)` and `n_probes` to `sqrt(n_list)`.
+`sqrt(n)`, `n_probes` to `sqrt(n_list)` and `nnd_n_trees` to `5 + sqrt(n) / 20`,
+capped at 64.
 
 ## MLX on Apple Silicon
 

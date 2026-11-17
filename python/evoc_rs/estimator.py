@@ -69,6 +69,8 @@ class EVoC(BaseEstimator):
         ef_construction: HNSW construction budget.
         ef_search: HNSW search budget.
         delta: NN-Descent convergence threshold.
+        nnd_n_trees: Trees seeding the NN-Descent graph, for nndescent and
+            nndescent_mlx. None uses `5 + sqrt(n) / 20`, capped at 64.
         bt_budget: BallTree search budget, as a fraction of the sample count.
         n_list: IVF cells. None uses sqrt(n).
         n_probes: IVF cells probed per query. None uses sqrt(n_list).
@@ -125,6 +127,7 @@ class EVoC(BaseEstimator):
         ef_construction: int = 200,
         ef_search: int = 100,
         delta: float = 0.001,
+        nnd_n_trees: int | None = None,
         bt_budget: float = 0.05,
         n_list: int | None = None,
         n_probes: int | None = None,
@@ -150,6 +153,7 @@ class EVoC(BaseEstimator):
         self.ef_construction = ef_construction
         self.ef_search = ef_search
         self.delta = delta
+        self.nnd_n_trees = nnd_n_trees
         self.bt_budget = bt_budget
         self.n_list = n_list
         self.n_probes = n_probes
@@ -198,6 +202,7 @@ class EVoC(BaseEstimator):
             ef_construction=self.ef_construction,
             ef_search=self.ef_search,
             delta=self.delta,
+            nnd_n_trees=self.nnd_n_trees,
             bt_budget=self.bt_budget,
             n_list=self.n_list,
             n_probes=self.n_probes,

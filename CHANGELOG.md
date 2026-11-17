@@ -3,6 +3,20 @@
 Changes to the `evoc-rs` crate. The Python package `evoc-rs` has its own
 changelog at [`python/CHANGELOG.md`](python/CHANGELOG.md).
 
+## 0.8.0
+
+**Breaking changes**
+
+- Take in `ann-search-rs` 0.13.1. k-means now defaults to e-means, so `ivf`,
+  `kmknn`, `ivf_mlx` and `ivf_gpu` give different results at the same seed.
+  `nndescent` distances can differ at rounding level.
+- `NearestNeighbourParamsEvoc::new` takes `nnd_n_trees` after `delta`.
+
+**Features**
+
+- `NearestNeighbourParamsEvoc::nnd_n_trees` sets the trees seeding `nndescent`
+  and `nndescent_mlx`. `None` keeps the backend default.
+
 ## 0.7.0
 
 **Breaking changes**

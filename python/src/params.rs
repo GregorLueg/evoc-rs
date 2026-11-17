@@ -101,6 +101,8 @@ pub(crate) struct NnArgs {
     pub ef_search: usize,
     /// NNDescent: convergence criterion.
     pub delta: f64,
+    /// NNDescent: trees seeding the graph.
+    pub nnd_n_trees: Option<usize>,
     /// BallTree: proportion of N to search.
     pub bt_budget: f64,
     /// IVF: number of lists.
@@ -124,7 +126,7 @@ impl NnArgs {
             ef_construction: self.ef_construction,
             ef_search: self.ef_search,
             delta: T::from(self.delta).unwrap(),
-            nnd_n_trees: None,
+            nnd_n_trees: self.nnd_n_trees,
             bt_budget: T::from(self.bt_budget).unwrap(),
             n_list: self.n_list,
             n_probes: self.n_probes,
